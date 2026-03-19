@@ -20,23 +20,24 @@ A Python-based PDF clause extraction pipeline with these components:
 - Full scaffold is in place and importable
 - `extractor.py` and `ocr.py` are implemented and tested (mocked unit tests pass without any installed dependencies)
 - `classifier.py` builds its system prompt dynamically from `taxonomy.yaml` — changing the taxonomy automatically changes what Claude looks for
-- API key is handled automatically by the Anthropic SDK via `ANTHROPIC_API_KEY` env var (set in `.env`, loaded with `python-dotenv`)
+- API key is in `.env` (gitignored), loaded via `python-dotenv`
 - `.gitignore` correctly excludes `input/`, `output/`, and `.env`
+- Extractor confirmed working against real PDF: `Provisions_on_medical_and_food_supplies_EN_2025_technical_update_final.pdf` (12 pages, all digital — no OCR needed)
+- Taxonomy expanded: added `binding`, `obliged`, `mandatory` to RESTRICTIONS; `ideally`, `where possible` to HIGH_RISK; `comply`, `maintain`, `retain` to context_pattern verbs (committed + pushed)
+- Bug fixed in `classifier.py`: `Anthropic()` client moved inside `classify()` so it initialises after `load_dotenv()` runs
+- SOCKS proxy issue resolved: run pipeline with `ALL_PROXY= all_proxy= FTP_PROXY= ftp_proxy= GRPC_PROXY= grpc_proxy=` prefix
 
 ## What's not tested yet
 
-- End-to-end run against a real PDF (no sample PDF in the repo)
+- End-to-end classifier run — blocked on API credits activating (purchased $5.33, awaiting propagation)
 - OCR path (requires Tesseract installed locally or Docker)
-- Claude API call (requires a live `ANTHROPIC_API_KEY`)
 
 ## Next step
 
-Drop a real donor agreement PDF into `input/` and run the pipeline end-to-end:
+Credits should be active — rerun the pipeline:
 
 ```bash
-cp .env.example .env          # add your ANTHROPIC_API_KEY
-pip install -r requirements.txt
-python -c "
+ALL_PROXY= all_proxy= FTP_PROXY= ftp_proxy= GRPC_PROXY= grpc_proxy= .venv/bin/python -c "
 from dotenv import load_dotenv; load_dotenv()
 from pathlib import Path
 from src.extractor import extract_pages
@@ -45,13 +46,19 @@ from src.classifier import classify
 from src.writer import write_result
 
 for pdf in Path('input').glob('*.pdf'):
+    print(f'Processing {pdf.name}...')
     pages = extract_pages(str(pdf))
     for p in pages:
         if p['needs_ocr']:
             p['text'] = ocr_pdf_page(str(pdf), p['page_num'])
     result = classify(pages, donor='ECHO', filename=pdf.name)
-    print(write_result(result, pdf.name))
+    out = write_result(result, pdf.name)
+    print(f'Done. {len(result[\"clauses\"])} clauses written to {out}')
 "
 ```
 
 Then review `output/<filename>.json` and tune the taxonomy or system prompt as needed.
+
+## Phase transition — 2026-03-19
+
+Moving into **flow diagram phase**: the extraction pipeline is stable; next work will focus on generating visual flow diagrams from the extracted clause data.
