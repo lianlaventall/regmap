@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PDFExtractorOutput",
+  "description": "Structured output for a single donor agreement document",
+  "type": "object",
+  "required": ["donor", "document", "processed_at", "pages_processed", "clauses"],
+  "properties": {
+    "donor": {
+      "type": "string",
+      "description": "Donor/funder identifier",
+      "example": "ECHO"
+    },
+    "document": {
+      "type": "string",
+      "description": "Original PDF filename",
+      "example": "filename.pdf"
+    },
+    "processed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the document was processed",
+      "example": "2026-03-19T12:00:00Z"
+    },
+    "pages_processed": {
+      "type": "integer",
+      "description": "Total number of pages processed",
+      "example": 7
+    },
+    "clauses": {
+      "type": "array",
+      "description": "All classified clauses extracted from the document",
+      "items": {
+        "type": "object",
+        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "notes"],
+        "properties": {
+          "clause_id": {
+            "type": "string",
+            "description": "Unique identifier: <DONOR>-<zero-padded sequence>",
+            "example": "ECHO-001"
+          },
+          "text": {
+            "type": "string",
+            "description": "Full sentence or clause text as it appears in the document",
+            "example": "The grantee must submit quarterly financial reports."
+          },
+          "page": {
+            "type": "integer",
+            "description": "1-based page number where the clause was found",
+            "example": 2
+          },
+          "trigger_word": {
+            "type": "string",
+            "description": "The modal or context verb that triggered classification",
+            "example": "must"
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["RESTRICTION", "DECISION", "HIGH_RISK"],
+            "description": "Classification tier from the taxonomy",
+            "example": "RESTRICTION"
+          },
+          "context_flag": {
+            "type": "boolean",
+            "description": "True if the clause was flagged via a context_pattern verb-first phrase",
+            "example": false
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional analyst notes or ambiguity flags",
+            "example": ""
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "donor": "ECHO",
+    "document": "filename.pdf",
+    "processed_at": "2026-03-19T12:00:00Z",
+    "pages_processed": 7,
+    "clauses": [
+      {
+        "clause_id": "ECHO-001",
+        "text": "the full sentence",
+        "page": 2,
+        "trigger_word": "must",
+        "tier": "RESTRICTION",
+        "context_flag": false,
+        "notes": ""
+      }
+    ]
+  }
+}

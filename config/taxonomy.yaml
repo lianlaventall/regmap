@@ -1,0 +1,36 @@
+tiers:
+  RESTRICTIONS:
+    description: Mandatory obligations — language that compels action
+    trigger_words:
+      - must
+      - will
+      - shall
+      - required
+      - shall not
+
+  DECISIONS:
+    description: Permissive language — actions that are allowed but not required
+    trigger_words:
+      - may
+      - can
+
+  HIGH_RISK:
+    description: Recommendatory language — soft obligations that carry compliance risk
+    trigger_words:
+      - recommended
+      - suggested
+      - encouraged
+      - should
+
+context_patterns:
+  description: >
+    Verb-first phrases that signal an obligation regardless of the modal word used.
+    When one of these verbs appears at the start of a clause, flag context_flag as true.
+  verbs:
+    - submit
+    - ensure
+    - verify
+    - demonstrate
+    - confirm
+    - provide
+    - notify
