@@ -7,6 +7,9 @@ tiers:
       - shall
       - required
       - shall not
+      - binding
+      - obliged
+      - mandatory
 
   DECISIONS:
     description: Permissive language — actions that are allowed but not required
@@ -21,6 +24,8 @@ tiers:
       - suggested
       - encouraged
       - should
+      - ideally
+      - where possible
 
 context_patterns:
   description: >
@@ -34,3 +39,6 @@ context_patterns:
     - confirm
     - provide
     - notify
+    - comply
+    - maintain
+    - retain
