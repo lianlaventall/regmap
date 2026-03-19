@@ -27,6 +27,19 @@ tiers:
       - ideally
       - where possible
 
+qualifiers:
+  description: >
+    Phrases that soften an otherwise mandatory clause. When a RESTRICTION trigger
+    word appears alongside one of these phrases, classify as QUALIFIED_RESTRICTION
+    instead of RESTRICTION and record the matched phrase in the notes field.
+  phrases:
+    - where possible
+    - where feasible
+    - where appropriate
+    - as far as possible
+    - to the extent possible
+    - if applicable
+
 context_patterns:
   description: >
     Verb-first phrases that signal an obligation regardless of the modal word used.

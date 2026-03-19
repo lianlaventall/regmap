@@ -5,8 +5,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from anthropic import Anthropic
 
-client = Anthropic()
-
 TAXONOMY_PATH = Path(__file__).parent.parent / "config" / "taxonomy.yaml"
 
 
@@ -18,6 +16,7 @@ def _load_taxonomy() -> dict:
 def _build_system_prompt(taxonomy: dict) -> str:
     tiers = taxonomy["tiers"]
     context_verbs = taxonomy["context_patterns"]["verbs"]
+    qualifiers = taxonomy["qualifiers"]["phrases"]
 
     tier_lines = []
     for tier_name, tier_data in tiers.items():
@@ -28,14 +27,31 @@ def _build_system_prompt(taxonomy: dict) -> str:
 
 TAXONOMY
 --------
-Classify each clause into one of three tiers based on its modal language:
+Classify each clause into one of four tiers based on its modal language:
 
 {chr(10).join(tier_lines)}
+- QUALIFIED_RESTRICTION: A RESTRICTION trigger word is present but the clause is softened by a qualifying phrase (see QUALIFIERS below). Record the matched qualifier in the notes field.
+
+QUALIFIERS
+----------
+If a clause has a RESTRICTION trigger word AND contains one of these phrases, classify it as QUALIFIED_RESTRICTION instead of RESTRICTION:
+{', '.join(qualifiers)}
 
 CONTEXT PATTERNS
 ----------------
 If a clause begins with one of these verbs (even without a modal word), set context_flag to true:
 {', '.join(context_verbs)}
+
+ACTOR CLASSIFICATION
+--------------------
+Set actor to "DONOR" when the clause describes an action by the granting authority, the Commission, or the donor itself.
+Set actor to "NGO" for all other clauses (default).
+
+NGO DEPENDENCY
+--------------
+Set creates_ngo_dependency to true when actor is "DONOR" and the NGO's ability to act or proceed is contingent on the donor completing that action first.
+Set creates_ngo_dependency to false when the clause is purely internal donor process with no downstream impact on the NGO.
+When actor is "NGO", always set creates_ngo_dependency to false.
 
 INSTRUCTIONS
 ------------
@@ -45,9 +61,11 @@ INSTRUCTIONS
    - The full sentence (text)
    - The 1-based page number (page)
    - The trigger word or context verb (trigger_word)
-   - The tier: RESTRICTION, DECISION, or HIGH_RISK
+   - The tier: RESTRICTION, QUALIFIED_RESTRICTION, DECISION, or HIGH_RISK
    - context_flag: true if triggered by a context_pattern verb, false otherwise
-   - notes: any ambiguity or analyst note (empty string if none)
+   - actor: "NGO" or "DONOR"
+   - creates_ngo_dependency: true or false
+   - notes: any ambiguity or analyst note; always include matched qualifier phrase for QUALIFIED_RESTRICTION clauses
 4. Return ONLY a valid JSON array of clause objects. No markdown, no explanation.
 
 JSON shape for each clause (do not include clause_id — it will be added later):
@@ -55,8 +73,10 @@ JSON shape for each clause (do not include clause_id — it will be added later)
   "text": "<full sentence>",
   "page": <int>,
   "trigger_word": "<word>",
-  "tier": "<RESTRICTION|DECISION|HIGH_RISK>",
+  "tier": "<RESTRICTION|QUALIFIED_RESTRICTION|DECISION|HIGH_RISK>",
   "context_flag": <true|false>,
+  "actor": "<NGO|DONOR>",
+  "creates_ngo_dependency": <true|false>,
   "notes": "<string>"
 }}"""
 
@@ -72,6 +92,7 @@ def classify(pages: list[dict], donor: str, filename: str) -> dict:
     Returns:
         dict matching output_schema.json
     """
+    client = Anthropic()
     taxonomy = _load_taxonomy()
     system_prompt = _build_system_prompt(taxonomy)
 

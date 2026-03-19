@@ -31,7 +31,7 @@
       "description": "All classified clauses extracted from the document",
       "items": {
         "type": "object",
-        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "notes"],
+        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "actor", "creates_ngo_dependency", "notes"],
         "properties": {
           "clause_id": {
             "type": "string",
@@ -55,7 +55,7 @@
           },
           "tier": {
             "type": "string",
-            "enum": ["RESTRICTION", "DECISION", "HIGH_RISK"],
+            "enum": ["RESTRICTION", "QUALIFIED_RESTRICTION", "DECISION", "HIGH_RISK"],
             "description": "Classification tier from the taxonomy",
             "example": "RESTRICTION"
           },
@@ -64,9 +64,20 @@
             "description": "True if the clause was flagged via a context_pattern verb-first phrase",
             "example": false
           },
+          "actor": {
+            "type": "string",
+            "enum": ["NGO", "DONOR"],
+            "description": "Who bears the obligation: NGO (default) or DONOR/Commission",
+            "example": "NGO"
+          },
+          "creates_ngo_dependency": {
+            "type": "boolean",
+            "description": "True when actor is DONOR and the NGO cannot act until the donor completes this action",
+            "example": false
+          },
           "notes": {
             "type": "string",
-            "description": "Optional analyst notes or ambiguity flags",
+            "description": "Optional analyst notes; includes matched qualifier phrase for QUALIFIED_RESTRICTION clauses",
             "example": ""
           }
         }
@@ -86,6 +97,8 @@
         "trigger_word": "must",
         "tier": "RESTRICTION",
         "context_flag": false,
+        "actor": "NGO",
+        "creates_ngo_dependency": false,
         "notes": ""
       }
     ]
