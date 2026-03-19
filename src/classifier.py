@@ -81,6 +81,26 @@ JSON shape for each clause (do not include clause_id — it will be added later)
 }}"""
 
 
+BATCH_SIZE = 10  # pages per API call
+
+
+def _call_claude(client: Anthropic, system_prompt: str, page_blocks: list[str]) -> list[dict]:
+    user_message = "\n\n".join(page_blocks) if page_blocks else "(no text extracted)"
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=16384,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+    )
+    raw = response.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+    return json.loads(raw)
+
+
 def classify(pages: list[dict], donor: str, filename: str) -> dict:
     """Send extracted page text to Claude and return a structured output dict.
 
@@ -96,31 +116,19 @@ def classify(pages: list[dict], donor: str, filename: str) -> dict:
     taxonomy = _load_taxonomy()
     system_prompt = _build_system_prompt(taxonomy)
 
-    # Build the user message: one block per page
-    page_blocks = []
-    for p in pages:
-        if p["text"].strip():
-            page_blocks.append(f"--- PAGE {p['page_num']} ---\n{p['text']}")
+    # Build one block per non-empty page
+    page_blocks = [
+        f"--- PAGE {p['page_num']} ---\n{p['text']}"
+        for p in pages
+        if p["text"].strip()
+    ]
 
-    user_message = "\n\n".join(page_blocks) if page_blocks else "(no text extracted)"
-
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=8096,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
-    )
-
-    raw = response.content[0].text.strip()
-
-    # Strip markdown code fences if Claude wrapped the JSON
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-
-    clauses_raw: list[dict] = json.loads(raw)
+    # Process in batches to handle large documents
+    clauses_raw = []
+    for i in range(0, len(page_blocks), BATCH_SIZE):
+        batch = page_blocks[i : i + BATCH_SIZE]
+        print(f"  Classifying pages batch {i // BATCH_SIZE + 1}/{-(-len(page_blocks) // BATCH_SIZE)}...")
+        clauses_raw.extend(_call_claude(client, system_prompt, batch))
 
     # Assign clause IDs
     clauses = []
