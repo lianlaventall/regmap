@@ -12,6 +12,7 @@ A Python-based PDF clause extraction pipeline with these components:
 | `src/writer.py` | Writes classifier output to `output/<filename>.json` |
 | `config/taxonomy.yaml` | Three-tier modal language taxonomy (RESTRICTIONS / DECISIONS / HIGH_RISK) + context pattern verbs |
 | `schemas/output_schema.json` | JSON Schema for the output format |
+| `src/compare.py` | Compares tier distributions across two output JSONs; prints counts, percentages, and Δ pct points per tier |
 | `tests/test_extractor.py` | Unit tests for `extract_pages` (mocked, no real PDF needed) |
 | `Dockerfile` | `python:3.11-slim` + Tesseract + Poppler |
 
