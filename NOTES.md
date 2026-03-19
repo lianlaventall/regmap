@@ -27,9 +27,15 @@ A Python-based PDF clause extraction pipeline with these components:
 - Bug fixed in `classifier.py`: `Anthropic()` client moved inside `classify()` so it initialises after `load_dotenv()` runs
 - SOCKS proxy issue resolved: run pipeline with `ALL_PROXY= all_proxy= FTP_PROXY= ftp_proxy= GRPC_PROXY= grpc_proxy=` prefix
 
+## What's working (confirmed end-to-end)
+
+- API credits active, classifier running successfully
+- Full pipeline run completed on ECHO document (`Provisions_on_medical_and_food_supplies_EN_2025_technical_update_final.pdf`)
+- Full pipeline run completed on BHA document (`USAID_BHA PMC Guidance Dec 2023.pdf`) — 113 clauses extracted
+- Output JSON files written to `output/`
+
 ## What's not tested yet
 
-- End-to-end classifier run — blocked on API credits activating (purchased $5.33, awaiting propagation)
 - OCR path (requires Tesseract installed locally or Docker)
 
 ## Next step
