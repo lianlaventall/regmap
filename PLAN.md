@@ -1,11 +1,11 @@
-# Plan: pdf-extractor Project Setup
+# Plan: regmap Project Setup
 
 ## Context
 Scaffold a new Python-based PDF extraction tool that takes PDFs from an `input/` folder, extracts text (with OCR fallback for scanned pages), applies rules via the Claude API, and writes structured JSON results to `output/`.
 
 ## Project Structure
 ```
-projects/pdf-extractor/
+projects/regmap/
 ├── input/              # drop PDFs here
 ├── output/             # JSON results land here
 ├── src/
@@ -55,12 +55,12 @@ projects/pdf-extractor/
 ## Git & GitHub Setup
 
 7. **Initialize git repo**
-   - `git init` inside `projects/pdf-extractor/`
+   - `git init` inside `projects/regmap/`
    - Create `.gitignore` (ignore `input/`, `output/`, `__pycache__/`, `.env`)
    - Initial commit with project scaffold
 
 8. **Create GitHub repo and push**
-   - `gh repo create pdf-extractor --public --source=. --remote=origin --push`
+   - `gh repo create regmap --public --source=. --remote=origin --push`
    - This creates the repo on GitHub, sets `origin`, and pushes the initial commit
 
 ## Verification

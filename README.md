@@ -1,4 +1,4 @@
-# pdf-extractor
+# regmap
 
 Extracts and classifies obligation clauses from donor agreement PDFs using a three-tier modal language taxonomy and the Claude API.
 
@@ -24,7 +24,7 @@ Context pattern verbs (verb-first clauses): `submit`, `ensure`, `verify`, `demon
 ```bash
 # 1. Clone and enter the project
 git clone <repo-url>
-cd pdf-extractor
+cd regmap
 
 # 2. Create a virtual environment
 python -m venv .venv
@@ -74,12 +74,12 @@ pytest tests/
 ## Docker
 
 ```bash
-docker build -t pdf-extractor .
+docker build -t regmap .
 docker run --rm \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   -v $(pwd)/input:/app/input \
   -v $(pwd)/output:/app/output \
-  pdf-extractor
+  regmap
 ```
 
 ## Output format
