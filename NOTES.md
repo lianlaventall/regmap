@@ -1,8 +1,10 @@
-# Session Notes — 2026-03-19
+# Session Notes — regmap
 
-## What we built
+## Project state (as of 2026-03-23)
 
-A Python-based PDF clause extraction pipeline with these components:
+The extraction pipeline is stable and the flow visualization phase is complete.
+
+## Components
 
 | File | Purpose |
 |------|---------|
@@ -10,63 +12,28 @@ A Python-based PDF clause extraction pipeline with these components:
 | `src/ocr.py` | Renders flagged pages via `pdf2image`, runs `pytesseract` |
 | `src/classifier.py` | Sends page text + taxonomy to Claude (`claude-sonnet-4-6`), returns structured JSON |
 | `src/writer.py` | Writes classifier output to `output/<filename>.json` |
+| `src/compare.py` | N-way tier distribution comparison across output JSONs; prints counts, percentages, and Δ pct points vs baseline |
+| `src/main.py` | Builds typed flow graph per donor → `output/flow_data.json` + `output/flow_viz.html` (D3.js, donor dropdown, hover tooltips) |
 | `config/taxonomy.yaml` | Three-tier modal language taxonomy (RESTRICTIONS / DECISIONS / HIGH_RISK) + context pattern verbs |
 | `schemas/output_schema.json` | JSON Schema for the output format |
-| `src/compare.py` | Compares tier distributions across N output JSONs; prints counts, percentages, and Δ pct points per tier vs baseline |
-| `src/main.py` | Builds typed flow graph per donor → `output/flow_data.json` + `output/flow_viz.html` (D3.js, donor dropdown, hover tooltips) |
-| `tests/test_extractor.py` | Unit tests for `extract_pages` (mocked, no real PDF needed) |
+| `tests/test_extractor.py` | Mocked unit tests for `extract_pages` — no real PDF or dependencies needed |
 | `Dockerfile` | `python:3.11-slim` + Tesseract + Poppler |
 
-## What's working
+## What's confirmed working
 
-- Full scaffold is in place and importable
-- `extractor.py` and `ocr.py` are implemented and tested (mocked unit tests pass without any installed dependencies)
-- `classifier.py` builds its system prompt dynamically from `taxonomy.yaml` — changing the taxonomy automatically changes what Claude looks for
-- API key is in `.env` (gitignored), loaded via `python-dotenv`
-- `.gitignore` correctly excludes `input/`, `output/`, and `.env`
-- Extractor confirmed working against real PDF: `Provisions_on_medical_and_food_supplies_EN_2025_technical_update_final.pdf` (12 pages, all digital — no OCR needed)
-- Taxonomy expanded: added `binding`, `obliged`, `mandatory` to RESTRICTIONS; `ideally`, `where possible` to HIGH_RISK; `comply`, `maintain`, `retain` to context_pattern verbs (committed + pushed)
-- Bug fixed in `classifier.py`: `Anthropic()` client moved inside `classify()` so it initialises after `load_dotenv()` runs
-- SOCKS proxy issue resolved: run pipeline with `ALL_PROXY= all_proxy= FTP_PROXY= ftp_proxy= GRPC_PROXY= grpc_proxy=` prefix
+- Full pipeline: extract → OCR fallback → classify → JSON output
+- Completed runs: ECHO (`Provisions_on_medical_and_food_supplies_EN_2025_technical_update_final.pdf`) and BHA (`USAID_BHA PMC Guidance Dec 2023.pdf`, 113 clauses)
+- N-way comparison via `python -m src.compare <path1> <path2> [...]`
+- Flow visualization: `python src/main.py` regenerates `output/flow_data.json` and `output/flow_viz.html`
+- Taxonomy is dynamic — changes to `config/taxonomy.yaml` automatically update what Claude extracts
 
-## What's working (confirmed end-to-end)
+## Known gaps
 
-- API credits active, classifier running successfully
-- Full pipeline run completed on ECHO document (`Provisions_on_medical_and_food_supplies_EN_2025_technical_update_final.pdf`)
-- Full pipeline run completed on BHA document (`USAID_BHA PMC Guidance Dec 2023.pdf`) — 113 clauses extracted
-- Output JSON files written to `output/`
+- OCR path untested (requires Tesseract locally or Docker)
+- No tests for `classifier.py`, `compare.py`, or `main.py`
 
-## What's not tested yet
+## Environment notes
 
-- OCR path (requires Tesseract installed locally or Docker)
-
-## Next step
-
-Credits should be active — rerun the pipeline:
-
-```bash
-ALL_PROXY= all_proxy= FTP_PROXY= ftp_proxy= GRPC_PROXY= grpc_proxy= .venv/bin/python -c "
-from dotenv import load_dotenv; load_dotenv()
-from pathlib import Path
-from src.extractor import extract_pages
-from src.ocr import ocr_pdf_page
-from src.classifier import classify
-from src.writer import write_result
-
-for pdf in Path('input').glob('*.pdf'):
-    print(f'Processing {pdf.name}...')
-    pages = extract_pages(str(pdf))
-    for p in pages:
-        if p['needs_ocr']:
-            p['text'] = ocr_pdf_page(str(pdf), p['page_num'])
-    result = classify(pages, donor='ECHO', filename=pdf.name)
-    out = write_result(result, pdf.name)
-    print(f'Done. {len(result[\"clauses\"])} clauses written to {out}')
-"
-```
-
-Then review `output/<filename>.json` and tune the taxonomy or system prompt as needed.
-
-## Phase transition — 2026-03-19
-
-Moving into **flow diagram phase**: the extraction pipeline is stable; next work will focus on generating visual flow diagrams from the extracted clause data.
+- API key in `.env` (gitignored), loaded via `python-dotenv`
+- SOCKS proxy must be cleared before running the pipeline: prefix commands with `ALL_PROXY= all_proxy= FTP_PROXY= ftp_proxy= GRPC_PROXY= grpc_proxy=`
+- `input/`, `output/`, and `.env` are gitignored
