@@ -25,7 +25,6 @@ tiers:
       - encouraged
       - should
       - ideally
-      - where possible
 
 qualifiers:
   description: >
@@ -39,6 +38,8 @@ qualifiers:
     - as far as possible
     - to the extent possible
     - if applicable
+    - unless otherwise specified
+    - subject to availability
 
 context_patterns:
   description: >
@@ -55,3 +56,57 @@ context_patterns:
     - comply
     - maintain
     - retain
+
+dead_ends:
+  description: >
+    Terminal states in the compliance flow. A dead end stops a decision path
+    rather than redirecting it. Used to distinguish restrictions that are truly
+    unconditional (candidates for cross-donor pooling) from those reachable only
+    via a specific upstream decision.
+  types:
+    UNCONDITIONAL:
+      description: >
+        Applies regardless of any upstream decision. Candidate for extraction
+        as a baseline requirement and cross-donor pooling.
+    CONDITIONAL:
+      description: >
+        Reachable only via a specific decision branch. Belongs in the tree as
+        a terminal node attached to its upstream decision point.
+    AMBIGUOUS:
+      description: >
+        Looks absolute but contains unresolved scope or undefined carve-outs.
+        Flag for audit risk. Record the ambiguous phrase in notes.
+  signals:
+    description: >
+      Phrases that indicate a clause is a terminal restriction. When matched,
+      set dead_end: true in the output JSON.
+    phrases:
+      - only from
+      - must not
+      - shall not
+      - no exceptions
+      - not acceptable
+      - not permitted
+      - not allowed
+      - cannot be
+
+domains:
+  description: >
+    Semantic topic of the clause. Assigned by the classifier to enable
+    cross-donor grouping and pooled restriction analysis. Each clause receives
+    one primary domain.
+  values:
+    PROCUREMENT:
+      description: Rules governing sourcing, vendors, or purchasing
+    REPORTING:
+      description: Obligations to submit data, reports, or notifications
+    RECORD_KEEPING:
+      description: Retention, documentation, and audit trail requirements
+    ELIGIBILITY:
+      description: Who or what qualifies under the agreement
+    FINANCIAL:
+      description: Budget, spend, reimbursement, or audit rules
+    SAFEGUARDING:
+      description: Protection of beneficiaries, staff, or data
+    SCOPE:
+      description: Geographic, temporal, or activity boundaries

@@ -17,11 +17,15 @@ def _build_system_prompt(taxonomy: dict) -> str:
     tiers = taxonomy["tiers"]
     context_verbs = taxonomy["context_patterns"]["verbs"]
     qualifiers = taxonomy["qualifiers"]["phrases"]
+    dead_end_signals = taxonomy["dead_ends"]["signals"]["phrases"]
+    domains = taxonomy["domains"]["values"]
 
     tier_lines = []
     for tier_name, tier_data in tiers.items():
         words = ", ".join(tier_data["trigger_words"])
         tier_lines.append(f"- {tier_name}: {words}  ({tier_data['description']})")
+
+    domain_lines = [f"- {k}: {v['description']}" for k, v in domains.items()]
 
     return f"""You are a compliance analyst extracting and classifying obligation clauses from donor agreement documents.
 
@@ -53,19 +57,29 @@ Set creates_ngo_dependency to true when actor is "DONOR" and the NGO's ability t
 Set creates_ngo_dependency to false when the clause is purely internal donor process with no downstream impact on the NGO.
 When actor is "NGO", always set creates_ngo_dependency to false.
 
+DEAD ENDS
+---------
+A dead end is a terminal restriction that stops a decision path rather than redirecting it.
+If the clause contains any of these signals, set dead_end to true:
+{', '.join(dead_end_signals)}
+
+When dead_end is true, also set dead_end_type:
+- UNCONDITIONAL: applies regardless of any upstream decision (no "if", "when", or conditional framing)
+- CONDITIONAL: reachable only via a specific decision branch (contains "if", "when", "in case of", etc.)
+- AMBIGUOUS: looks absolute but contains unresolved scope or undefined carve-outs; record the ambiguous phrase in notes
+
+When dead_end is false, set dead_end_type to null.
+
+DOMAINS
+-------
+Assign one primary domain that best describes what the clause is about:
+{chr(10).join(domain_lines)}
+
 INSTRUCTIONS
 ------------
 1. Read each page of text provided by the user.
 2. Identify every sentence or clause that contains a trigger word or context pattern verb.
-3. For each clause, extract:
-   - The full sentence (text)
-   - The 1-based page number (page)
-   - The trigger word or context verb (trigger_word)
-   - The tier: RESTRICTION, QUALIFIED_RESTRICTION, DECISION, or HIGH_RISK
-   - context_flag: true if triggered by a context_pattern verb, false otherwise
-   - actor: "NGO" or "DONOR"
-   - creates_ngo_dependency: true or false
-   - notes: any ambiguity or analyst note; always include matched qualifier phrase for QUALIFIED_RESTRICTION clauses
+3. For each clause, extract all fields below.
 4. Return ONLY a valid JSON array of clause objects. No markdown, no explanation.
 
 JSON shape for each clause (do not include clause_id — it will be added later):
@@ -77,6 +91,9 @@ JSON shape for each clause (do not include clause_id — it will be added later)
   "context_flag": <true|false>,
   "actor": "<NGO|DONOR>",
   "creates_ngo_dependency": <true|false>,
+  "dead_end": <true|false>,
+  "dead_end_type": "<UNCONDITIONAL|CONDITIONAL|AMBIGUOUS|null>",
+  "domain": "<PROCUREMENT|REPORTING|RECORD_KEEPING|ELIGIBILITY|FINANCIAL|SAFEGUARDING|SCOPE>",
   "notes": "<string>"
 }}"""
 

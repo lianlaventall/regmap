@@ -31,7 +31,7 @@
       "description": "All classified clauses extracted from the document",
       "items": {
         "type": "object",
-        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "actor", "creates_ngo_dependency", "notes"],
+        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "actor", "creates_ngo_dependency", "dead_end", "dead_end_type", "domain", "notes"],
         "properties": {
           "clause_id": {
             "type": "string",
@@ -75,9 +75,26 @@
             "description": "True when actor is DONOR and the NGO cannot act until the donor completes this action",
             "example": false
           },
+          "dead_end": {
+            "type": "boolean",
+            "description": "True when the clause is a terminal restriction matching a dead_end signal phrase",
+            "example": false
+          },
+          "dead_end_type": {
+            "type": ["string", "null"],
+            "enum": ["UNCONDITIONAL", "CONDITIONAL", "AMBIGUOUS", null],
+            "description": "Type of dead end: UNCONDITIONAL (no upstream condition), CONDITIONAL (gated by a decision branch), AMBIGUOUS (unresolved scope). Null when dead_end is false.",
+            "example": null
+          },
+          "domain": {
+            "type": "string",
+            "enum": ["PROCUREMENT", "REPORTING", "RECORD_KEEPING", "ELIGIBILITY", "FINANCIAL", "SAFEGUARDING", "SCOPE"],
+            "description": "Primary semantic domain of the clause, used for cross-donor pooling",
+            "example": "REPORTING"
+          },
           "notes": {
             "type": "string",
-            "description": "Optional analyst notes; includes matched qualifier phrase for QUALIFIED_RESTRICTION clauses",
+            "description": "Optional analyst notes; includes matched qualifier phrase for QUALIFIED_RESTRICTION clauses and ambiguous phrase for AMBIGUOUS dead ends",
             "example": ""
           }
         }
@@ -99,6 +116,9 @@
         "context_flag": false,
         "actor": "NGO",
         "creates_ngo_dependency": false,
+        "dead_end": false,
+        "dead_end_type": null,
+        "domain": "REPORTING",
         "notes": ""
       }
     ]
