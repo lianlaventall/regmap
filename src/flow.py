@@ -1,21 +1,23 @@
 """
-main.py — Build decision flow structures from extracted clause JSONs
-and render an interactive D3.js visualization.
+flow.py — Build decision flow graph structures and render the flow visualization.
+
+Usage:
+  python -m src.flow
 
 Outputs:
   output/flow_data.json  — structured flow graph per donor
-  output/flow_viz.html   — single-file D3 visualization with donor dropdown
+  output/flow_viz.html   — single-file D3 force-directed visualization with donor dropdown
 """
 
 import json
 import re
 from pathlib import Path
 
-TIERS = ["RESTRICTION", "QUALIFIED_RESTRICTION", "HIGH_RISK", "DECISION"]
-
 OUTPUT_DIR = Path("output")
 FLOW_DATA_PATH = OUTPUT_DIR / "flow_data.json"
 FLOW_VIZ_PATH = OUTPUT_DIR / "flow_viz.html"
+
+TIERS = ["RESTRICTION", "QUALIFIED_RESTRICTION", "HIGH_RISK", "DECISION"]
 
 
 # ---------------------------------------------------------------------------
@@ -36,6 +38,7 @@ def build_flow(donor: str, document: str, clauses: list) -> dict:
     decision        — branches into yes/no child nodes
     high_risk       — flagged audit branch
     qualified       — branches with a condition extracted from the clause text
+    unconditional   — UNCONDITIONAL dead end; visually distinct from restriction
     """
     nodes = []
     edges = []
@@ -66,11 +69,14 @@ def build_flow(donor: str, document: str, clauses: list) -> dict:
             "creates_ngo_dependency": clause.get("creates_ngo_dependency", False),
             "notes": clause.get("notes", ""),
             "context_flag": clause.get("context_flag", False),
+            "domain": clause.get("domain", ""),
+            "dead_end": clause.get("dead_end", False),
+            "dead_end_type": clause.get("dead_end_type"),
         }
 
         if tier == "RESTRICTION":
             base["type"] = "restriction"
-            base["branches"] = []          # dead end
+            base["branches"] = []
 
         elif tier == "DECISION":
             yes_id = nid + "_yes"
@@ -80,7 +86,7 @@ def build_flow(donor: str, document: str, clauses: list) -> dict:
                 {"edge": "yes", "target": yes_id, "label": "Comply / Proceed"},
                 {"edge": "no",  "target": no_id,  "label": "Non-compliance / Escalate"},
             ]
-            nodes.append({"id": yes_id, "type": "outcome", "label": "Comply / Proceed",   "donor": donor})
+            nodes.append({"id": yes_id, "type": "outcome", "label": "Comply / Proceed",          "donor": donor})
             nodes.append({"id": no_id,  "type": "outcome", "label": "Non-compliance / Escalate", "donor": donor})
             edges.append({"source": nid, "target": yes_id, "label": "yes"})
             edges.append({"source": nid, "target": no_id,  "label": "no"})
@@ -96,11 +102,10 @@ def build_flow(donor: str, document: str, clauses: list) -> dict:
             edges.append({"source": nid, "target": audit_id, "label": "audit risk"})
 
         elif tier == "QUALIFIED_RESTRICTION":
-            # Try to extract the condition from the text (phrase after trigger word)
             trigger = clause.get("trigger_word", "where")
             match = re.search(
                 rf'\b{re.escape(trigger)}\b(.{{0,120}}?)(?:[,;.]|$)',
-                text, re.IGNORECASE
+                text, re.IGNORECASE,
             )
             condition = match.group(1).strip() if match else "condition applies"
             condition = condition[:80] + ("…" if len(condition) > 80 else "")
@@ -192,22 +197,21 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
   .node circle:hover { filter: drop-shadow(0 0 8px rgba(255,255,255,.3)); }
 
-  .node-root         circle { fill: #1a1d27; stroke: #aaa; }
-  .node-restriction  circle { fill: #c0392b; stroke: #e74c3c; }
-  .node-decision     circle { fill: #2980b9; stroke: #3498db; }
-  .node-high_risk    circle { fill: #d35400; stroke: #e67e22; }
-  .node-qualified    circle { fill: #8e44ad; stroke: #9b59b6; }
-  .node-outcome      circle { fill: #27ae60; stroke: #2ecc71; }
-  .node-audit        circle { fill: #e67e22; stroke: #f39c12; }
+  .node-root          circle { fill: #1a1d27; stroke: #aaa; }
+  .node-restriction   circle { fill: #c0392b; stroke: #e74c3c; }
+  .node-decision      circle { fill: #2980b9; stroke: #3498db; }
+  .node-high_risk     circle { fill: #d35400; stroke: #e67e22; }
+  .node-qualified     circle { fill: #8e44ad; stroke: #9b59b6; }
+  .node-outcome       circle { fill: #27ae60; stroke: #2ecc71; }
+  .node-audit         circle { fill: #e67e22; stroke: #f39c12; }
+  .node-unconditional circle { fill: #7b0000; stroke: #e74c3c; stroke-dasharray: 4 2; stroke-width: 2.5px; }
 
   .node text {
     font-size: 9px; fill: #ccc; pointer-events: none;
     text-anchor: middle; dominant-baseline: central;
   }
 
-  .edge-label {
-    font-size: 8px; fill: #777; pointer-events: none;
-  }
+  .edge-label { font-size: 8px; fill: #777; pointer-events: none; }
 
   #tooltip {
     position: fixed; background: #1a1d27; border: 1px solid #3a3d4e;
@@ -220,10 +224,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   #tooltip .tt-text  { color: #ccc; margin-bottom: 6px; }
   #tooltip .tt-notes { color: #888; font-style: italic; }
 
-  .tier-restriction  { color: #e74c3c; }
-  .tier-decision     { color: #3498db; }
-  .tier-high_risk    { color: #e67e22; }
-  .tier-qualified    { color: #9b59b6; }
+  .tier-restriction { color: #e74c3c; }
+  .tier-decision    { color: #3498db; }
+  .tier-high_risk   { color: #e67e22; }
+  .tier-qualified   { color: #9b59b6; }
 
   #legend {
     position: fixed; bottom: 20px; left: 20px;
@@ -232,13 +236,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
   #legend h3 { font-size: .75rem; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
   .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-dot  { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>regmap</h1>
+  <h1>regmap — Decision Flow</h1>
   <select id="donor-select"></select>
   <span id="stats"></span>
 </header>
@@ -249,6 +253,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <div id="legend">
   <h3>Node types</h3>
   <div class="legend-item"><div class="legend-dot" style="background:#c0392b;border:2px solid #e74c3c"></div>Restriction (dead end)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7b0000;border:2.5px dashed #e74c3c"></div>Unconditional dead end</div>
   <div class="legend-item"><div class="legend-dot" style="background:#2980b9;border:2px solid #3498db"></div>Decision (yes / no)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d35400;border:2px solid #e67e22"></div>High Risk (audit flag)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#8e44ad;border:2px solid #9b59b6"></div>Qualified restriction</div>
@@ -279,16 +284,13 @@ function tierClass(type) {
 
 function render(donor) {
   const flow = FLOW_DATA[donor];
-  const nodeMap = Object.fromEntries(flow.nodes.map(n => [n.id, n]));
 
-  // node radius by type
   const radius = { root: 18, restriction: 10, decision: 10, high_risk: 10,
-                   qualified: 10, outcome: 8, audit: 8 };
+                   qualified: 10, outcome: 8, audit: 8, unconditional: 10 };
 
   const w = document.getElementById("canvas").clientWidth;
   const h = document.getElementById("canvas").clientHeight;
 
-  // clear
   d3.select("#svg").selectAll("*").remove();
   if (simulation) simulation.stop();
 
@@ -300,23 +302,18 @@ function render(donor) {
       .on("zoom", e => g.attr("transform", e.transform))
   );
 
-  // build link data
-  const links = flow.edges.map(e => ({
-    source: e.source, target: e.target, label: e.label
-  }));
+  const links = flow.edges.map(e => ({ source: e.source, target: e.target, label: e.label }));
 
-  // build node data with initial positions
   const nodes = flow.nodes.map(n => ({
     ...n,
-    r: radius[n.type] || 8,
+    r: radius[n.dead_end_type === "UNCONDITIONAL" ? "unconditional" : n.type] || 8,
     x: n.type === "root" ? w / 2 : w / 2 + (Math.random() - .5) * 400,
     y: n.type === "root" ? 60     : 60 + Math.random() * (h - 120),
   }));
 
-  // arrowhead markers
   const markerColors = {
     default: "#555", yes: "#2ecc71", no: "#e74c3c",
-    audit: "#e67e22", condition_met: "#2ecc71", condition_not_met: "#e74c3c"
+    audit: "#e67e22", condition_met: "#2ecc71", condition_not_met: "#e74c3c",
   };
   const defs = svg.append("defs");
   Object.entries(markerColors).forEach(([key, color]) => {
@@ -328,11 +325,9 @@ function render(donor) {
   });
 
   function markerKey(label) {
-    if (["yes","no","audit","condition_met","condition_not_met"].includes(label)) return label;
-    return "default";
+    return ["yes","no","audit","condition_met","condition_not_met"].includes(label) ? label : "default";
   }
 
-  // links
   const linkSel = g.append("g").selectAll("line")
     .data(links).join("line")
     .attr("class", d => `link link-${d.label}`)
@@ -343,10 +338,9 @@ function render(donor) {
     .attr("class", "edge-label")
     .text(d => d.label);
 
-  // nodes
   const nodeSel = g.append("g").selectAll("g")
     .data(nodes).join("g")
-    .attr("class", d => `node node-${d.type}`)
+    .attr("class", d => `node node-${d.dead_end_type === "UNCONDITIONAL" ? "unconditional" : d.type}`)
     .call(
       d3.drag()
         .on("start", (e, d) => { if (!e.active) simulation.alphaTarget(.3).restart(); d.fx = d.x; d.fy = d.y; })
@@ -359,9 +353,10 @@ function render(donor) {
       tooltip.innerHTML = `
         <div class="tt-id">${d.clause_id || ""} · page ${d.page || ""} · trigger: <em>${d.trigger_word || ""}</em></div>
         <div class="tt-tier ${tierClass(d.type)}">${d.type.toUpperCase().replace("_"," ")}</div>
+        ${d.domain ? `<div style="font-size:.72rem;color:#888;margin-bottom:4px">Domain: ${d.domain}${d.dead_end_type ? ` · <span style="color:#e74c3c">${d.dead_end_type}</span>` : ""}</div>` : ""}
         <div class="tt-text">${d.full_text}</div>
-        ${d.notes ? `<div class="tt-notes">${d.notes}</div>` : ""}
-        ${d.actor ? `<div style="margin-top:6px;font-size:.75rem;color:#666">Actor: ${d.actor} · NGO dependency: ${d.creates_ngo_dependency}</div>` : ""}
+        ${d.notes  ? `<div class="tt-notes">${d.notes}</div>` : ""}
+        ${d.actor  ? `<div style="margin-top:6px;font-size:.75rem;color:#666">Actor: ${d.actor} · NGO dependency: ${d.creates_ngo_dependency}</div>` : ""}
       `;
     })
     .on("mousemove", e => {
@@ -373,11 +368,10 @@ function render(donor) {
   nodeSel.append("circle").attr("r", d => d.r);
   nodeSel.append("text").text(d => d.type === "root" ? d.label : (d.clause_id || ""));
 
-  // force simulation
   simulation = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(120).strength(.6))
-    .force("charge", d3.forceManyBody().strength(-300))
-    .force("center", d3.forceCenter(w / 2, h / 2))
+    .force("link",    d3.forceLink(links).id(d => d.id).distance(120).strength(.6))
+    .force("charge",  d3.forceManyBody().strength(-300))
+    .force("center",  d3.forceCenter(w / 2, h / 2))
     .force("collide", d3.forceCollide(d => d.r + 12))
     .on("tick", () => {
       linkSel
@@ -402,15 +396,10 @@ render(donors[0]);
 
 
 def build_viz(flows: dict) -> None:
-    flow_json = json.dumps(flows)
-    html = HTML_TEMPLATE.replace("__FLOW_DATA__", flow_json)
+    html = HTML_TEMPLATE.replace("__FLOW_DATA__", json.dumps(flows))
     FLOW_VIZ_PATH.write_text(html)
     print(f"Written: {FLOW_VIZ_PATH}")
 
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     print("Building flow structures…")
