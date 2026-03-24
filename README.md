@@ -64,8 +64,8 @@ This is under development and will be a standalone visualization separate from `
 git clone <repo-url>
 cd regmap
 
-python -m venv env
-source env/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 
 pip install -r requirements.txt
 
