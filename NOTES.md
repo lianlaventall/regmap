@@ -1,5 +1,33 @@
 # Session Notes — regmap
 
+## Session 2026-03-24
+
+### Goal
+Reshape the taxonomy and classifier to support cross-donor pooling and visual comparison — the foundation for a dedicated cross-donor analysis view separate from the per-donor flow visualization.
+
+### Changes made
+
+**`config/taxonomy.yaml`**
+- Removed `where possible` from `HIGH_RISK` trigger words — it belongs only in `qualifiers`. Having it in both caused the classifier to misclassify softened mandatory language as HIGH_RISK instead of QUALIFIED_RESTRICTION.
+- Added `unless otherwise specified` and `subject to availability` to `qualifiers` — both are common softening phrases in donor/humanitarian regulatory language.
+- Added `dead_ends` top-level key with three types (UNCONDITIONAL, CONDITIONAL, AMBIGUOUS) and a set of signal phrases (`must not`, `shall not`, `not permitted`, etc.). UNCONDITIONAL dead ends are the candidates for cross-donor pooling.
+- Added `domains` top-level key with 7 semantic buckets (PROCUREMENT, REPORTING, RECORD_KEEPING, ELIGIBILITY, FINANCIAL, SAFEGUARDING, SCOPE). Domain assignment enables grouping equivalent obligations across donors regardless of phrasing variance.
+
+**`src/classifier.py`**
+- Extended `_build_system_prompt` to read `dead_ends.signals` and `domains.values` from the taxonomy and inject them into the Claude prompt.
+- Claude now outputs `dead_end` (bool), `dead_end_type` (UNCONDITIONAL/CONDITIONAL/AMBIGUOUS/null), and `domain` per clause.
+
+**`schemas/output_schema.json`**
+- Added `dead_end`, `dead_end_type`, and `domain` to the required clause fields with enums matching the taxonomy.
+
+### Design decisions
+- Cross-donor analysis will be a separate visualization from `flow_viz.html`, which was a per-donor draft.
+- Pooling logic: group UNCONDITIONAL dead-end clauses by `domain`, then use Claude to normalize phrasing into canonical form within each group. The visual will be a matrix — rows = domain, columns = donor, cells = present/absent.
+- AMBIGUOUS dead ends are flagged for human audit before entering any baseline pool.
+- Next step: re-run pipeline on BHA and ECHO to get enriched output with new fields, then build the pooling/visualization layer.
+
+---
+
 ## Project state (as of 2026-03-23)
 
 The extraction pipeline is stable and the flow visualization phase is complete.
