@@ -1,5 +1,93 @@
 # Session Notes — regmap
 
+## Session 2026-03-25
+
+### Goal
+Run GFFO through the pipeline and validate N-donor scaling with a 3-way comparison (BHA / ECHO / GFFO).
+
+### Pipeline run — GFFO
+- Input: `input/GFFO ANBest-P 2019_Annotated.pdf` (6 pages, 1 batch)
+- Output: `output/GFFO ANBest-P 2019_Annotated.json` — **43 clauses**
+
+### Tier comparison — all three donors
+
+| Tier | BHA (n=114) | ECHO (n=27) | GFFO (n=43) | Δ ECHO vs BHA | Δ GFFO vs BHA |
+|---|---|---|---|---|---|
+| RESTRICTION | 88.6% | 70.4% | 86.0% | -18.2 | -2.6 |
+| QUALIFIED_RESTRICTION | 0.9% | 7.4% | 2.3% | +6.5 | +1.4 |
+| HIGH_RISK | 7.0% | 3.7% | 0.0% | -3.3 | -7.0 |
+| DECISION | 3.5% | 18.5% | 11.6% | +15.0 | +8.1 |
+
+Key findings:
+- **GFFO clusters with BHA** — both ~87% RESTRICTION; ECHO is the outlier granting far more discretion
+- **GFFO has zero HIGH_RISK** — no soft-obligation language at all; obligations are either hard or permissive, nothing in between
+- **ECHO retains its outlier profile** — 5× more DECISION than BHA, highest QUALIFIED_RESTRICTION; operates differently from both
+
+### Domain-level breakdown
+
+**Clause count by domain:**
+
+| Domain | BHA | ECHO | GFFO |
+|---|---|---|---|
+| PROCUREMENT | 41 | 18 | 1 |
+| REPORTING | 24 | 2 | 19 |
+| RECORD_KEEPING | 6 | 3 | 6 |
+| ELIGIBILITY | 30 | 4 | 2 |
+| FINANCIAL | 8 | 0 | 14 |
+| SAFEGUARDING | 5 | 0 | 0 |
+| SCOPE | 0 | 0 | 1 |
+
+Key findings:
+- **GFFO is reporting-heavy** — 19 of 43 clauses (44%) are REPORTING vs BHA's 21% and ECHO's 7%
+- **GFFO is financial-heavy** — 14 clauses (33%) vs BHA's 7% and ECHO's 0%
+- **BHA and ECHO are procurement-heavy** — 36% and 67% respectively; GFFO has almost none (1 clause)
+- **BHA dominates ELIGIBILITY** — 30 clauses vs 4 (ECHO) and 2 (GFFO); pharmaceutical hard walls
+- **SAFEGUARDING and SCOPE** remain sparse — SAFEGUARDING BHA-only; SCOPE 0–1 across all donors
+
+**UNCONDITIONAL dead ends by domain:**
+
+| Domain | BHA | ECHO | GFFO | Shared |
+|---|---|---|---|---|
+| PROCUREMENT | 5 | 1 | 0 | BHA+ECHO |
+| REPORTING | 1 | 0 | 0 | — |
+| ELIGIBILITY | 3 | 0 | 1 | BHA+GFFO |
+| FINANCIAL | 1 | 0 | 3 | BHA+GFFO |
+
+Key findings:
+- **No domain has UNCONDITIONAL dead ends across all three donors** — pooling baseline is still pairwise
+- **PROCUREMENT** (BHA+ECHO): same overlap as before; GFFO has no procurement clauses, so not applicable
+- **ELIGIBILITY and FINANCIAL** are new pairwise overlaps between BHA and GFFO — candidate domains for BHA/GFFO cross-donor analysis
+- **ECHO is a dead-end outlier** — only 1 UNCONDITIONAL across all domains; its obligations are largely conditional
+
+**Dead end type totals:**
+
+| Type | BHA | ECHO | GFFO |
+|---|---|---|---|
+| UNCONDITIONAL | 10 | 1 | 4 |
+| CONDITIONAL | 17 | 1 | 2 |
+| AMBIGUOUS | 1 | 1 | 0 |
+
+### Visualizations
+All four regenerated to include GFFO:
+- `output/flow_viz.html` — 3-donor dropdown; GFFO: 56 nodes, 55 edges
+- `output/heatmap.html` — updated domain × tier density and dead-end tabs for all 3 donors
+- `output/sankey.html` — 23 nodes, 44 links across 3 donors
+- `output/dag.html` — GFFO tree built and added to donor toggle
+
+Note: heatmap reports "Shared UNCONDITIONAL domains: none" — correct, no domain has all three donors.
+
+### N-donor scaling verdict
+Confirmed working. All four visualizations extended cleanly to 3 donors without changes.
+
+### Next steps
+- Add more donor documents; next meaningful threshold is 5+ donors for matrix view
+- Build cross-donor matrix view (rows = domain, columns = donor, cells = UNCONDITIONAL present/absent)
+- Investigate SCOPE domain: GFFO has 1 clause now but BHA/ECHO still 0 — classifier may be underassigning
+- Investigate SAFEGUARDING gap: BHA-only so far; likely a humanitarian-specific domain not present in GFFO/ECHO docs
+- Consider phrasing normalization for ELIGIBILITY and FINANCIAL pairwise dead ends (BHA+GFFO)
+
+---
+
 ## Session 2026-03-24 (continued)
 
 ### Goal
