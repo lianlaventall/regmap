@@ -76,6 +76,18 @@ All four regenerated to include GFFO:
 
 Note: heatmap reports "Shared UNCONDITIONAL domains: none" — correct, no domain has all three donors.
 
+### DECISION clause character
+
+Pulling the actual DECISION clauses revealed they are qualitatively different across donors — not just more or fewer:
+
+| Donor | DECISION nature | Example |
+|---|---|---|
+| BHA | Approval-gated — discretion only after exception granted | "If an exception is approved, you may proceed"; "you may select a different prequalified vendor" |
+| ECHO | Genuine procedural autonomy tied to context | May use negotiated single-offer via HPC; may skip pre-qualification; may award directly under €300k |
+| GFFO | Largely donor-reserved rights, not implementer freedom | Agency may revoke grant; Federal Court of Audit entitled to inspect; one implementer-side clause: budget line flexibility ±20% |
+
+BHA and GFFO have DECISION clauses in name only — BHA's are conditional on prior approval, GFFO's are the donor protecting its oversight position. ECHO is the only donor granting genuine operational discretion.
+
 ### N-donor scaling verdict
 Confirmed working. All four visualizations extended cleanly to 3 donors without changes.
 
