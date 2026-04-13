@@ -89,6 +89,12 @@ dead_ends:
       - not permitted
       - not allowed
       - cannot be
+      - prohibited
+      - in no case
+      - under no circumstances
+      - forbidden
+      - ineligible
+      - only permitted
 
 domains:
   description: >
@@ -102,8 +108,23 @@ domains:
       description: Obligations to submit data, reports, or notifications
     RECORD_KEEPING:
       description: Retention, documentation, and audit trail requirements
-    ELIGIBILITY:
-      description: Who or what qualifies under the agreement
+    ELIGIBILITY_ACTOR:
+      description: >
+        Who can participate — sanctions lists, debarment, MDB blacklists,
+        nationality rules, status disqualification
+    ELIGIBILITY_COMMODITY:
+      description: >
+        What can be procured — commodity restrictions, pharmaceutical
+        indications, product quality standards and floors
+    ELIGIBILITY_ASSET:
+      description: >
+        How funded assets can be used — purpose restrictions,
+        binding periods, repurposing prohibitions
+    INTEGRITY:
+      description: >
+        Procurement integrity and fraud prevention — conflict of interest,
+        anti-corruption certifications, falsification prohibitions,
+        competition distortion rules. A proxy for donor risk culture.
     FINANCIAL:
       description: Budget, spend, reimbursement, or audit rules
     SAFEGUARDING:

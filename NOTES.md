@@ -1,5 +1,54 @@
 # Session Notes — regmap
 
+## Session 2026-04-13 (continued) — Taxonomy revision
+
+### Taxonomy analysis
+
+Ran a full analysis of `config/taxonomy.yaml` against the 4-donor dataset. Two questions: (1) does it capture everything? (2) how does Claude go beyond it?
+
+Full analysis saved to `reports/taxonomy_analysis_2026-04-13.txt`.
+
+**Key finding — taxonomy functions as a calibration frame, not a ruleset.**
+Claude extends well beyond the listed trigger words through semantic reasoning (compound modals, structural patterns, morphological generalisation). Strengthening trigger words has low analytical value because Claude already handles them correctly.
+
+**Higher-value changes are in domains**, where taxonomy gaps produce false positives in cross-donor pooling analysis.
+
+### Taxonomy changes applied
+
+**Domains — ELIGIBILITY split (3 → 1 new)**
+
+`ELIGIBILITY` was too broad — it was grouping three distinct compliance concerns into one domain, producing misleading "shared UNCONDITIONAL" signals:
+
+| Old | New | What it covers |
+|---|---|---|
+| ELIGIBILITY | `ELIGIBILITY_ACTOR` | Who can participate: sanctions, debarment, MDB blacklists, nationality rules |
+| ELIGIBILITY | `ELIGIBILITY_COMMODITY` | What can be procured: commodity restrictions, pharmaceutical indications, quality floors |
+| ELIGIBILITY | `ELIGIBILITY_ASSET` | How funded assets can be used: purpose restrictions, binding periods |
+
+**Domains — INTEGRITY added**
+
+New domain capturing procurement integrity and fraud prevention: conflict of interest, anti-corruption certifications, falsification prohibitions, competition distortion rules.
+
+**Why:** Regulation exists largely to prevent fraud. INTEGRITY clause density is a direct proxy for donor risk culture — a donor with 30 INTEGRITY clauses signals deep institutional distrust of implementers; one with 2 signals a partnership model. This is a distinct analytical lens that general RESTRICTION count does not provide.
+
+AFD has ~30 clauses that were previously misclassified as ELIGIBILITY that belong here.
+
+**Dead end signals — 6 phrases added**
+
+Added: `prohibited`, `in no case`, `under no circumstances`, `forbidden`, `ineligible`, `only permitted`
+
+These appear in the data and signal UNCONDITIONAL dead ends but were absent from the signals list. Adding them makes dead-end detection more robust across donor languages.
+
+**What was NOT changed (and why)**
+
+Trigger words and qualifiers were left unchanged. Claude already handles compound modals (`may only`, `may not`), obligation constructions (`is to be`), and morphological variants correctly through semantic reasoning. Adding them to the taxonomy is defensive but has near-zero impact on current output.
+
+### Pipeline re-run
+
+Not yet run. Existing output JSONs still use old `ELIGIBILITY` domain. Re-run all 4 donors before next analysis pass.
+
+---
+
 ## Session 2026-04-13
 
 ### Goal
