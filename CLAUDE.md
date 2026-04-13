@@ -93,7 +93,7 @@ python -m src.dag       # hierarchical decision DAG per donor → output/dag.htm
 - OCR path untested end-to-end (requires Tesseract locally or Docker)
 - No tests beyond `src/tests/test_extractor.py`
 - SCOPE domain: 0–1 clauses across all current donors — possibly underassigned by classifier
-- SAFEGUARDING: BHA-only so far — likely document-type specific, not a classifier issue
+- SAFEGUARDING: DOS-only so far — likely document-type specific, not a classifier issue
 
 ---
 

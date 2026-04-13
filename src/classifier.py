@@ -1,9 +1,10 @@
 import os
 import json
+import time
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
-from anthropic import Anthropic
+from anthropic import Anthropic, RateLimitError
 
 TAXONOMY_PATH = Path(__file__).parent.parent / "config" / "taxonomy.yaml"
 
@@ -98,24 +99,37 @@ JSON shape for each clause (do not include clause_id — it will be added later)
 }}"""
 
 
-BATCH_SIZE = 10  # pages per API call
+BATCH_SIZE = 5   # pages per API call
+MAX_RETRIES = 4  # retries on rate limit (exponential backoff)
 
 
 def _call_claude(client: Anthropic, system_prompt: str, page_blocks: list[str]) -> list[dict]:
     user_message = "\n\n".join(page_blocks) if page_blocks else "(no text extracted)"
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=16384,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    raw = response.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-    return json.loads(raw)
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=16384,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_message}],
+            )
+            raw = response.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+                raw = raw.strip()
+            return json.loads(raw)
+        except RateLimitError:
+            wait = 60 * (attempt + 1)
+            print(f"    Rate limit — waiting {wait}s (retry {attempt + 1}/{MAX_RETRIES})...")
+            time.sleep(wait)
+        except json.JSONDecodeError:
+            wait = 10 * (attempt + 1)
+            print(f"    Malformed JSON — waiting {wait}s and retrying (retry {attempt + 1}/{MAX_RETRIES})...")
+            time.sleep(wait)
+        if attempt == MAX_RETRIES - 1:
+            raise RuntimeError(f"Failed to get valid response after {MAX_RETRIES} attempts")
 
 
 def classify(pages: list[dict], donor: str, filename: str) -> dict:
@@ -142,9 +156,11 @@ def classify(pages: list[dict], donor: str, filename: str) -> dict:
 
     # Process in batches to handle large documents
     clauses_raw = []
+    n_batches = -(-len(page_blocks) // BATCH_SIZE)
     for i in range(0, len(page_blocks), BATCH_SIZE):
         batch = page_blocks[i : i + BATCH_SIZE]
-        print(f"  Classifying pages batch {i // BATCH_SIZE + 1}/{-(-len(page_blocks) // BATCH_SIZE)}...")
+        batch_num = i // BATCH_SIZE + 1
+        print(f"  Classifying pages batch {batch_num}/{n_batches}...")
         clauses_raw.extend(_call_claude(client, system_prompt, batch))
 
     # Assign clause IDs

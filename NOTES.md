@@ -1,9 +1,52 @@
 # Session Notes — regmap
 
+## Session 2026-04-13
+
+### Goal
+Rerun pipeline on all donors with clean naming (DOS replacing BHA/USAID), add AFD as a new 4-donor.
+
+### Pipeline changes
+- Created `src/pipeline.py` — single entry point for extract → classify → write. Supports single PDFs and donor folders (multi-PDF merge).
+- Added dedup step to pipeline for multi-PDF donors: removes near-duplicate clauses (≥0.85 similarity) produced by overlapping source documents. Only runs when >1 PDF.
+- Reduced `BATCH_SIZE` from 10 → 5 pages per API call (prevents JSON truncation on large docs).
+- Added retry logic to classifier: rate limit errors back off 60s × attempt; malformed JSON retries after 10s × attempt.
+- Removed fixed inter-batch delay (was slowing runs unnecessarily — retry logic handles limits).
+
+### Donors re-run (all output renamed to clean donor IDs)
+| Donor | Clauses | vs. prior run |
+|---|---|---|
+| DOS (was BHA) | 110 | -4 (minor classifier variance + smaller batch size) |
+| ECHO | 26 | -1 (effectively identical) |
+| GFFO | 56 | +13 (previous run was dropping clauses due to batch density — new count more complete) |
+| AFD (new) | 475 | — |
+
+### AFD profile
+- 2 PDFs merged: `AFD-R0097 - Directives PM - 2024-v2_va.pdf` (59 pages) + `Specific AFD Rules and Procedures.pdf` (7 pages)
+- 495 extracted, 20 deduped → **475 clauses**
+- 72.8% RESTRICTION, 10.1% DECISION, 8.6% QUALIFIED_RESTRICTION, 8.4% HIGH_RISK
+- PROCUREMENT-dominant (271/475, 57%) — makes sense given AFD-R0097 is procurement guidelines
+- SAFEGUARDING: 32 clauses — first donor after DOS with meaningful safeguarding presence
+- 12 null-domain clauses patched manually post-run (PROCUREMENT, ELIGIBILITY, FINANCIAL)
+
+### Key finding: ELIGIBILITY domain is too broad
+With AFD added, ELIGIBILITY became the first domain with UNCONDITIONAL dead ends across multiple donors (AFD: 18, DOS: 8, ECHO: 1, GFFO: 1). But the substance is entirely different per donor:
+- **AFD** — *actor eligibility*: sanctions, debarment, conflict of interest, MDB blacklists, embargo
+- **DOS** — *commodity eligibility*: pharmaceutical hard walls (specific drugs restricted to specific indications)
+- **ECHO** — *standard eligibility*: quality assurance floor on medical supplies, no derogation
+- **GFFO** — *asset eligibility*: grant-funded assets must not be repurposed during binding period
+
+**Implication:** "Shared UNCONDITIONAL ELIGIBILITY" is technically true but analytically misleading. These are three distinct sub-domains — actor eligibility, commodity eligibility, asset eligibility — that warrant separate taxonomy entries in a future taxonomy revision.
+
+### Taxonomy debt flagged
+- ELIGIBILITY should be split into: `ELIGIBILITY_ACTOR`, `ELIGIBILITY_COMMODITY`, `ELIGIBILITY_ASSET`
+- This would make cross-donor pooling analysis more precise and prevent false positives in the shared UNCONDITIONAL domain detection
+
+
+
 ## Session 2026-03-25
 
 ### Goal
-Run GFFO through the pipeline and validate N-donor scaling with a 3-way comparison (BHA / ECHO / GFFO).
+Run GFFO through the pipeline and validate N-donor scaling with a 3-way comparison (DOS / ECHO / GFFO).
 
 ### Pipeline run — GFFO
 - Input: `input/GFFO ANBest-P 2019_Annotated.pdf` (6 pages, 1 batch)
@@ -11,7 +54,7 @@ Run GFFO through the pipeline and validate N-donor scaling with a 3-way comparis
 
 ### Tier comparison — all three donors
 
-| Tier | BHA (n=114) | ECHO (n=27) | GFFO (n=43) | Δ ECHO vs BHA | Δ GFFO vs BHA |
+| Tier | DOS (n=114) | ECHO (n=27) | GFFO (n=43) | Δ ECHO vs DOS | Δ GFFO vs DOS |
 |---|---|---|---|---|---|
 | RESTRICTION | 88.6% | 70.4% | 86.0% | -18.2 | -2.6 |
 | QUALIFIED_RESTRICTION | 0.9% | 7.4% | 2.3% | +6.5 | +1.4 |
@@ -19,15 +62,15 @@ Run GFFO through the pipeline and validate N-donor scaling with a 3-way comparis
 | DECISION | 3.5% | 18.5% | 11.6% | +15.0 | +8.1 |
 
 Key findings:
-- **GFFO clusters with BHA** — both ~87% RESTRICTION; ECHO is the outlier granting far more discretion
+- **GFFO clusters with DOS** — both ~87% RESTRICTION; ECHO is the outlier granting far more discretion
 - **GFFO has zero HIGH_RISK** — no soft-obligation language at all; obligations are either hard or permissive, nothing in between
-- **ECHO retains its outlier profile** — 5× more DECISION than BHA, highest QUALIFIED_RESTRICTION; operates differently from both
+- **ECHO retains its outlier profile** — 5× more DECISION than DOS, highest QUALIFIED_RESTRICTION; operates differently from both
 
 ### Domain-level breakdown
 
 **Clause count by domain:**
 
-| Domain | BHA | ECHO | GFFO |
+| Domain | DOS | ECHO | GFFO |
 |---|---|---|---|
 | PROCUREMENT | 41 | 18 | 1 |
 | REPORTING | 24 | 2 | 19 |
@@ -38,30 +81,30 @@ Key findings:
 | SCOPE | 0 | 0 | 1 |
 
 Key findings:
-- **GFFO is reporting-heavy** — 19 of 43 clauses (44%) are REPORTING vs BHA's 21% and ECHO's 7%
-- **GFFO is financial-heavy** — 14 clauses (33%) vs BHA's 7% and ECHO's 0%
-- **BHA and ECHO are procurement-heavy** — 36% and 67% respectively; GFFO has almost none (1 clause)
-- **BHA dominates ELIGIBILITY** — 30 clauses vs 4 (ECHO) and 2 (GFFO); pharmaceutical hard walls
-- **SAFEGUARDING and SCOPE** remain sparse — SAFEGUARDING BHA-only; SCOPE 0–1 across all donors
+- **GFFO is reporting-heavy** — 19 of 43 clauses (44%) are REPORTING vs DOS's 21% and ECHO's 7%
+- **GFFO is financial-heavy** — 14 clauses (33%) vs DOS's 7% and ECHO's 0%
+- **DOS and ECHO are procurement-heavy** — 36% and 67% respectively; GFFO has almost none (1 clause)
+- **DOS dominates ELIGIBILITY** — 30 clauses vs 4 (ECHO) and 2 (GFFO); pharmaceutical hard walls
+- **SAFEGUARDING and SCOPE** remain sparse — SAFEGUARDING DOS-only; SCOPE 0–1 across all donors
 
 **UNCONDITIONAL dead ends by domain:**
 
-| Domain | BHA | ECHO | GFFO | Shared |
+| Domain | DOS | ECHO | GFFO | Shared |
 |---|---|---|---|---|
-| PROCUREMENT | 5 | 1 | 0 | BHA+ECHO |
+| PROCUREMENT | 5 | 1 | 0 | DOS+ECHO |
 | REPORTING | 1 | 0 | 0 | — |
-| ELIGIBILITY | 3 | 0 | 1 | BHA+GFFO |
-| FINANCIAL | 1 | 0 | 3 | BHA+GFFO |
+| ELIGIBILITY | 3 | 0 | 1 | DOS+GFFO |
+| FINANCIAL | 1 | 0 | 3 | DOS+GFFO |
 
 Key findings:
 - **No domain has UNCONDITIONAL dead ends across all three donors** — pooling baseline is still pairwise
-- **PROCUREMENT** (BHA+ECHO): same overlap as before; GFFO has no procurement clauses, so not applicable
-- **ELIGIBILITY and FINANCIAL** are new pairwise overlaps between BHA and GFFO — candidate domains for BHA/GFFO cross-donor analysis
+- **PROCUREMENT** (DOS+ECHO): same overlap as before; GFFO has no procurement clauses, so not applicable
+- **ELIGIBILITY and FINANCIAL** are new pairwise overlaps between DOS and GFFO — candidate domains for DOS/GFFO cross-donor analysis
 - **ECHO is a dead-end outlier** — only 1 UNCONDITIONAL across all domains; its obligations are largely conditional
 
 **Dead end type totals:**
 
-| Type | BHA | ECHO | GFFO |
+| Type | DOS | ECHO | GFFO |
 |---|---|---|---|
 | UNCONDITIONAL | 10 | 1 | 4 |
 | CONDITIONAL | 17 | 1 | 2 |
@@ -82,11 +125,11 @@ Pulling the actual DECISION clauses revealed they are qualitatively different ac
 
 | Donor | DECISION nature | Example |
 |---|---|---|
-| BHA | Approval-gated — discretion only after exception granted | "If an exception is approved, you may proceed"; "you may select a different prequalified vendor" |
+| DOS | Approval-gated — discretion only after exception granted | "If an exception is approved, you may proceed"; "you may select a different prequalified vendor" |
 | ECHO | Genuine procedural autonomy tied to context | May use negotiated single-offer via HPC; may skip pre-qualification; may award directly under €300k |
 | GFFO | Largely donor-reserved rights, not implementer freedom | Agency may revoke grant; Federal Court of Audit entitled to inspect; one implementer-side clause: budget line flexibility ±20% |
 
-BHA and GFFO have DECISION clauses in name only — BHA's are conditional on prior approval, GFFO's are the donor protecting its oversight position. ECHO is the only donor granting genuine operational discretion.
+DOS and GFFO have DECISION clauses in name only — DOS's are conditional on prior approval, GFFO's are the donor protecting its oversight position. ECHO is the only donor granting genuine operational discretion.
 
 ### N-donor scaling verdict
 Confirmed working. All four visualizations extended cleanly to 3 donors without changes.
@@ -94,9 +137,9 @@ Confirmed working. All four visualizations extended cleanly to 3 donors without 
 ### Next steps
 - Add more donor documents; next meaningful threshold is 5+ donors for matrix view
 - Build cross-donor matrix view (rows = domain, columns = donor, cells = UNCONDITIONAL present/absent)
-- Investigate SCOPE domain: GFFO has 1 clause now but BHA/ECHO still 0 — classifier may be underassigning
-- Investigate SAFEGUARDING gap: BHA-only so far; likely a humanitarian-specific domain not present in GFFO/ECHO docs
-- Consider phrasing normalization for ELIGIBILITY and FINANCIAL pairwise dead ends (BHA+GFFO)
+- Investigate SCOPE domain: GFFO has 1 clause now but DOS/ECHO still 0 — classifier may be underassigning
+- Investigate SAFEGUARDING gap: DOS-only so far; likely a humanitarian-specific domain not present in GFFO/ECHO docs
+- Consider phrasing normalization for ELIGIBILITY and FINANCIAL pairwise dead ends (DOS+GFFO)
 
 ---
 
@@ -106,11 +149,11 @@ Confirmed working. All four visualizations extended cleanly to 3 donors without 
 Build the analysis and visualization layer on top of the enriched pipeline output (dead_end, dead_end_type, domain fields). Three new visualizations plus a formal analysis report.
 
 ### Analysis
-- Re-ran pipeline on BHA (114 clauses) and ECHO (27 clauses) with enriched fields confirmed in output.
+- Re-ran pipeline on DOS (114 clauses) and ECHO (27 clauses) with enriched fields confirmed in output.
 - Key findings (all scaled/normalized):
-  - BHA is 89% RESTRICTION vs ECHO 70% — BHA is far more restrictive
-  - ECHO has ~5x more DECISION-tier clauses proportionally (19% vs 4%) — ECHO grants condition-triggered autonomy, BHA is permission-seeking
-  - BHA ELIGIBILITY domain has 60% dead-end rate — pharmaceutical-specific hard walls
+  - DOS is 89% RESTRICTION vs ECHO 70% — DOS is far more restrictive
+  - ECHO has ~5x more DECISION-tier clauses proportionally (19% vs 4%) — ECHO grants condition-triggered autonomy, DOS is permission-seeking
+  - DOS ELIGIBILITY domain has 60% dead-end rate — pharmaceutical-specific hard walls
   - PROCUREMENT is the only domain where both donors share UNCONDITIONAL dead ends — the cross-donor pooling candidate
   - Both donors have exactly 1 AMBIGUOUS dead end — flagged for human audit
 - Full report written to `reports/analysis_report_2026-03-24.md` (gitignored, local only)
@@ -153,7 +196,7 @@ Build the analysis and visualization layer on top of the enriched pipeline outpu
 
 ### Design decisions
 - All four visualization scripts are self-contained and parallel in structure — no shared entry point
-- Cross-donor pooling baseline: PROCUREMENT is the only domain with UNCONDITIONAL dead ends in both donors. BHA's are commodity-specific; ECHO's is a structural channel requirement (HPC or pre-certified). Different in nature but complementary.
+- Cross-donor pooling baseline: PROCUREMENT is the only domain with UNCONDITIONAL dead ends in both donors. DOS's are commodity-specific; ECHO's is a structural channel requirement (HPC or pre-certified). Different in nature but complementary.
 - SCOPE domain has 0 clauses in both documents — either not present in these docs or classifier underassigning. Worth investigating when more donors are added.
 
 ### Next steps
@@ -214,7 +257,7 @@ Reshape the taxonomy and classifier to support cross-donor pooling and visual co
 ## What's confirmed working
 
 - Full pipeline: extract → OCR fallback → classify → JSON output
-- Completed runs: ECHO (27 clauses) and BHA (114 clauses) with enriched dead_end/domain fields
+- Completed runs: ECHO (27 clauses) and DOS (114 clauses) with enriched dead_end/domain fields
 - N-way comparison via `python -m src.compare <path1> <path2> [...]`
 - All four visualizations regenerate independently: `python -m src.{flow,heatmap,sankey,dag}`
 - Taxonomy is dynamic — changes to `config/taxonomy.yaml` automatically update what Claude extracts
