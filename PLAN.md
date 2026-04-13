@@ -39,7 +39,7 @@ python -m src.{flow,heatmap,sankey,dag}
 ### Donors processed
 | Donor | Clauses | Dominant domains |
 |---|---|---|
-| BHA (USAID) | 114 | PROCUREMENT, ELIGIBILITY |
+| DOS (USAID) | 114 | PROCUREMENT, ELIGIBILITY |
 | ECHO (EU) | 27 | PROCUREMENT |
 | GFFO (Germany) | 43 | REPORTING, FINANCIAL |
 
@@ -90,19 +90,19 @@ Signal phrases: `must not`, `shall not`, `not permitted`, `not allowed`, `cannot
 ## Key analytical findings (3-donor baseline)
 
 ### Tier profiles
-- **BHA** — 88.6% RESTRICTION; most prescriptive; discretion is approval-gated not genuine
+- **DOS** — 88.6% RESTRICTION; most prescriptive; discretion is approval-gated not genuine
 - **ECHO** — 18.5% DECISION; structural outlier; grants genuine operational autonomy via HPC mechanisms
 - **GFFO** — 86% RESTRICTION, zero HIGH_RISK; obligations are binary (mandatory or permissive); DECISION clauses are donor-reserved audit rights, not implementer freedoms
 
 ### DECISION clause character
 | Donor | DECISION nature |
 |---|---|
-| BHA | Narrow, approval-gated — "if exception approved, you may proceed" |
+| DOS | Narrow, approval-gated — "if exception approved, you may proceed" |
 | ECHO | Genuine procedural autonomy — negotiated procedures, skip pre-qualification, direct award under €300k |
 | GFFO | Largely donor-reserved rights — agency may revoke, audit, inspect; implementer gets limited budget flexibility (±20%) |
 
 ### Dead-end overlap (UNCONDITIONAL)
-| Domain | BHA | ECHO | GFFO |
+| Domain | DOS | ECHO | GFFO |
 |---|---|---|---|
 | PROCUREMENT | 5 | 1 | 0 |
 | ELIGIBILITY | 3 | 0 | 1 |
@@ -170,5 +170,5 @@ A lightweight web app (likely Flask or FastAPI backend + simple frontend) that:
 - OCR path untested end-to-end (requires Tesseract locally or Docker)
 - No tests for classifier, compare, or any visualization script
 - SCOPE domain: 0–1 clauses across all donors — possibly underassigned by classifier
-- SAFEGUARDING: BHA-only so far — may be document-type specific
+- SAFEGUARDING: DOS-only so far — may be document-type specific
 - Cross-donor phrasing normalization (Claude-powered) not yet built for ELIGIBILITY/FINANCIAL pairwise dead ends

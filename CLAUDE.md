@@ -56,6 +56,14 @@ N-way tier distribution comparison across any set of output JSONs:
 python -m src.compare output/file1.json output/file2.json [...]
 ```
 
+Structured 7-section analytical report across all donors in `output/`:
+
+```bash
+python -m src.report   # writes reports/analysis_<YYYY-MM-DD>.md
+```
+
+Sections: compliance burden · domain burden · actor split · NGO dependency map · dead-end profile · DECISION inventory · context flag patterns.
+
 ---
 
 ## Visualizations
@@ -85,7 +93,7 @@ python -m src.dag       # hierarchical decision DAG per donor → output/dag.htm
 - OCR path untested end-to-end (requires Tesseract locally or Docker)
 - No tests beyond `src/tests/test_extractor.py`
 - SCOPE domain: 0–1 clauses across all current donors — possibly underassigned by classifier
-- SAFEGUARDING: BHA-only so far — likely document-type specific, not a classifier issue
+- SAFEGUARDING: DOS-only so far — likely document-type specific, not a classifier issue
 
 ---
 
@@ -98,6 +106,7 @@ python -m src.dag       # hierarchical decision DAG per donor → output/dag.htm
 | `src/classifier.py` | Sends page text + taxonomy to Claude, returns structured JSON |
 | `src/writer.py` | Writes classifier output to `output/<filename>.json` |
 | `src/compare.py` | N-way tier distribution comparison (CLI) |
+| `src/report.py` | 7-section structured Markdown report → `reports/analysis_<date>.md` |
 | `src/flow.py` | Per-donor force-directed graph |
 | `src/heatmap.py` | Cross-donor domain × tier heatmap + dead-end analysis |
 | `src/sankey.py` | Cross-donor Sankey flow |

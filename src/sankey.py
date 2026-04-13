@@ -23,7 +23,7 @@ TIER_COLORS = {
     "QUALIFIED_RESTRICTION":"#8e44ad",
 }
 DONOR_COLORS = {
-    "BHA":  "#1abc9c",
+    "DOS":  "#1abc9c",
     "ECHO": "#e67e22",
 }
 DOMAIN_ORDER = [
@@ -55,7 +55,7 @@ def build_sankey_data() -> dict:
         raw = json.loads(path.read_text())
         donor_data[raw["donor"]] = raw["clauses"]
 
-    # Layer 0: donor nodes (ordered BHA first, then ECHO)
+    # Layer 0: donor nodes (ordered DOS first, then ECHO)
     for donor in sorted(donor_data.keys()):
         get_or_add(donor, 0, DONOR_COLORS.get(donor, "#aaa"))
 
@@ -207,7 +207,7 @@ const TIER_COLORS = {
   DECISION:              "#2980b9",
   QUALIFIED_RESTRICTION: "#8e44ad",
 };
-const DONOR_COLORS = { BHA: "#1abc9c", ECHO: "#e67e22" };
+const DONOR_COLORS = { DOS: "#1abc9c", ECHO: "#e67e22" };
 
 // ── legend ───────────────────────────────────────────────────────────────────
 Object.entries(DONOR_COLORS).forEach(([d, c]) => {
