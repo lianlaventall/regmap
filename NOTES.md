@@ -69,10 +69,18 @@ Full analysis + harmonization framing written to `reports/taxonomy_and_donor_cul
 3. `decision_type` — new required field: `DISCRETIONARY_AUTONOMY | CONDITIONAL_FLEXIBILITY | DONOR_RESERVED | null`
 4. `preference_signal` — new required field: string (donor's stated preference) or null. GUIDED_DISCRETION only.
 
+### Classifier changes applied (`src/classifier.py`)
+
+- Updated to five tiers
+- Added BOUNDARY RULES section (HIGH_RISK vs GUIDED_DISCRETION, QUALIFIED_RESTRICTION vs GUIDED_DISCRETION)
+- Added DECISION SUB-TYPING section with lookup phrases for each sub-type
+- Added GUIDED DISCRETION PREFERENCE SIGNAL section
+- Updated JSON shape: added `decision_type`, `preference_signal`; fixed `tier` and `domain` enums
+- Committed and pushed to main (96ee66b)
+
 ### Still to do
 
-- Update classifier prompt to reflect new tier and sub-type instructions
-- Pipeline rerun — all 4 donors still stale from 2026-04-13 taxonomy revision
+- Pipeline rerun — all 4 donors stale (taxonomy revised 2026-04-13, classifier revised 2026-04-14)
 
 ---
 
