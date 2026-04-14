@@ -1,5 +1,81 @@
 # Session Notes — regmap
 
+## Session 2026-04-14 — DECISION sub-typing, GUIDED_DISCRETION, schema + taxonomy changes
+
+### Analytical work
+
+Full review of all 64 DECISION clauses across 4 donors (DOS: 3, ECHO: 5, GFFO: 8, AFD: 48).
+
+**Core finding:** DECISION as a tier conflates three structurally different things — NGO autonomy, approval-gated flexibility, and donor enforcement rights. Raw DECISION counts are not a reliable measure of NGO decision space.
+
+**DECISION sub-types defined:**
+
+| Sub-type | Who decides | Approval needed | Notes |
+|---|---|---|---|
+| `DISCRETIONARY_AUTONOMY` | NGO | No | Real NGO choice, no strings |
+| `CONDITIONAL_FLEXIBILITY` | NGO nominally | Yes — prior donor approval | Approval-gated; real decision is donor's |
+| `DONOR_RESERVED` | Donor | N/A | Donor enforcement/intervention right; not NGO choice |
+
+**Real NGO decision space** (DISCRETIONARY_AUTONOMY only, estimated pre-rerun):
+
+| Donor | Raw DECISION | Est. real NGO discretion |
+|---|---|---|
+| DOS | 3 | ~1 |
+| ECHO | 5 | ~5 |
+| GFFO | 8 | ~2 |
+| AFD | 48 | ~15–20 |
+
+**GUIDED_DISCRETION — new tier identified:**
+
+Pattern found in ~13 clauses (11 AFD, 1 DOS, 1 ECHO): NGO has genuine discretion, no approval required, but donor has stated a preference. Currently misclassified as HIGH_RISK (9 clauses) or QUALIFIED_RESTRICTION (2 clauses).
+
+Distinct from HIGH_RISK (which implies audit risk on non-compliance) and from DECISION (which has no preference signal). Sits on the discretion side of the taxonomy but with a donor lean attached.
+
+ECHO-020 edge case: "whenever possible and advisable, priority must be given..." → QUALIFIED_RESTRICTION, not GUIDED_DISCRETION. The `must` makes it a restriction regardless of the softener. Resolved — no impact on data.
+
+**GUIDED_DISCRETION is almost entirely an AFD phenomenon** in this dataset, concentrated in PROCUREMENT. Signals AFD uses soft recommendation as a governance tool — institutional views stated without formal mandate.
+
+**Full tier ladder (obligation → discretion):**
+```
+RESTRICTION              → must, no choice
+QUALIFIED_RESTRICTION    → must, softened by context
+HIGH_RISK                → should, audit risk if ignored
+GUIDED_DISCRETION        → may, donor preference stated
+DECISION                 → may, genuinely free choice
+```
+
+### Donor culture analysis
+
+Key profiles derived from data:
+- **DOS** — compliance is the relationship. 97.3% obligation. DECISION clauses are all approval-gated.
+- **ECHO** — we set the floor; you run the operation. 19.2% real discretion, nearly all DISCRETIONARY_AUTONOMY.
+- **GFFO** — binary and legalistic. Zero QUALIFIED_RESTRICTION, zero HIGH_RISK. Hard mandates or free choice, no gray zones.
+- **AFD** — procedural depth with embedded preference culture. Most complex dataset, highest GUIDED_DISCRETION density.
+
+INTEGRITY clause density = proxy for donor risk culture (institutional trust vs. distrust of implementers). High count signals preoccupation with fraud risk. Analytically distinct from general RESTRICTION count.
+
+Full analysis + harmonization framing written to `reports/taxonomy_and_donor_culture.md`.
+
+### Taxonomy changes applied (`config/taxonomy.yaml`)
+
+1. **GUIDED_DISCRETION** — new tier added with trigger signals, three required conditions, boundary rule against QUALIFIED_RESTRICTION, instruction to populate `preference_signal`
+2. **DECISIONS** — expanded with explicit sub-type classification instructions for the classifier (DISCRETIONARY_AUTONOMY / CONDITIONAL_FLEXIBILITY / DONOR_RESERVED)
+3. **HIGH_RISK** — tightened with boundary rule: if deviation carries no audit/enforcement risk → GUIDED_DISCRETION. Removed `recommended`/`encouraged`/`suggested` from trigger words.
+
+### Schema changes applied (`schemas/output_schema.json`)
+
+1. `tier` enum — added `GUIDED_DISCRETION`
+2. `domain` enum — replaced `ELIGIBILITY` with `ELIGIBILITY_ACTOR`, `ELIGIBILITY_COMMODITY`, `ELIGIBILITY_ASSET`; added `INTEGRITY` (bug fix — schema was stale since last taxonomy revision)
+3. `decision_type` — new required field: `DISCRETIONARY_AUTONOMY | CONDITIONAL_FLEXIBILITY | DONOR_RESERVED | null`
+4. `preference_signal` — new required field: string (donor's stated preference) or null. GUIDED_DISCRETION only.
+
+### Still to do
+
+- Update classifier prompt to reflect new tier and sub-type instructions
+- Pipeline rerun — all 4 donors still stale from 2026-04-13 taxonomy revision
+
+---
+
 ## Session 2026-04-13 (continued) — Taxonomy revision
 
 ### Taxonomy analysis
