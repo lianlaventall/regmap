@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="dcterms.date" content="2026-04-13" />
+  <title>regmap — Taxonomy Analysis</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 1in;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">regmap — Taxonomy Analysis</h1>
+<p class="subtitle">Coverage gaps, Claude’s reasoning behaviour, and
+recommended updates</p>
+<p class="date">2026-04-13</p>
+</header>
+<h1 id="taxonomy-analysis-regmap">Taxonomy Analysis — regmap</h1>
+<p><strong>Date:</strong> 2026-04-13 <strong>Donors analysed:</strong>
+DOS (110 clauses), ECHO (26), GFFO (56), AFD (475) <strong>Total
+clauses:</strong> 667</p>
+<hr />
+<h2 id="purpose-of-this-document">1. Purpose of This Document</h2>
+<p>This document analyses the <code>config/taxonomy.yaml</code> file
+that drives the regmap classifier. It answers two questions:</p>
+<ol type="1">
+<li><strong>Does the taxonomy capture everything?</strong> — What
+language patterns appear in the data that are not accounted for in the
+taxonomy?</li>
+<li><strong>How does Claude go beyond the taxonomy?</strong> — Where is
+Claude reasoning semantically rather than pattern-matching against the
+taxonomy?</li>
+</ol>
+<p>The findings are drawn from inspecting trigger words, notes, context
+flags, and domain assignments across all four processed donors.</p>
+<hr />
+<h2 id="what-the-taxonomy-currently-does">2. What the Taxonomy Currently
+Does</h2>
+<p>The taxonomy provides four structures that are injected into Claude’s
+system prompt at classification time:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Structure</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tiers</strong></td>
+<td>Four obligation levels: RESTRICTION, QUALIFIED_RESTRICTION,
+HIGH_RISK, DECISION</td>
+</tr>
+<tr>
+<td><strong>Qualifiers</strong></td>
+<td>Phrases that downgrade RESTRICTION → QUALIFIED_RESTRICTION</td>
+</tr>
+<tr>
+<td><strong>Dead ends</strong></td>
+<td>Signal phrases that mark terminal restrictions (UNCONDITIONAL /
+CONDITIONAL / AMBIGUOUS)</td>
+</tr>
+<tr>
+<td><strong>Domains</strong></td>
+<td>Seven semantic buckets for cross-donor grouping</td>
+</tr>
+</tbody>
+</table>
+<p>The taxonomy functions as a <strong>calibration frame</strong>, not a
+complete ruleset. It defines the conceptual structure and output schema;
+Claude fills in the rest using its understanding of regulatory
+language.</p>
+<hr />
+<h2 id="trigger-word-gaps">3. Trigger Word Gaps</h2>
+<h3 id="compound-restrictive-modals">3.1 Compound Restrictive
+Modals</h3>
+<p>The taxonomy lists <code>may</code> as a DECISION trigger — but
+<code>may</code> combined with a limiting word becomes a restriction.
+These compound patterns are not handled:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Example</th>
+<th>Correct tier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>may only</code></td>
+<td>“The grant may only be requested insofar as it is needed…”</td>
+<td>RESTRICTION</td>
+</tr>
+<tr>
+<td><code>may not</code></td>
+<td>“Higher salaries…may not exceed those set down in TVöD”</td>
+<td>RESTRICTION</td>
+</tr>
+<tr>
+<td><code>only permitted</code></td>
+<td>“Only permitted under exceptional circumstances”</td>
+<td>RESTRICTION / dead end</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Risk:</strong> Clauses using these patterns could be
+misclassified as DECISION. Claude currently handles them correctly
+through semantic reasoning, but the taxonomy does not protect against
+this if model behaviour changes.</p>
+<h3 id="obligation-constructions-without-modal-verbs">3.2 Obligation
+Constructions Without Modal Verbs</h3>
+<p>German-style regulatory English frequently uses <code>is to be</code>
+/ <code>are to be</code> constructions that carry mandatory force
+without a modal verb. Examples from GFFO:</p>
+<ul>
+<li><em>“The grant is to be used efficiently and
+economically.”</em></li>
+<li><em>“All income…is to be applied to the grant purpose.”</em></li>
+<li><em>“Interim reports are to be submitted within…”</em></li>
+</ul>
+<p>None of these trigger words (<code>is to be</code>,
+<code>are to be</code>, <code>to be</code>) appear in the taxonomy.
+Claude correctly classifies them as RESTRICTION, but only through
+semantic understanding.</p>
+<h3 id="missing-context-pattern-verbs">3.3 Missing Context Pattern
+Verbs</h3>
+<p>The taxonomy’s <code>context_patterns</code> list is incomplete. The
+following obligation verbs appear in the data but are absent:</p>
+<table>
+<thead>
+<tr>
+<th>Missing verb</th>
+<th>Occurrences</th>
+<th>Donor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>certify</code></td>
+<td>15</td>
+<td>AFD</td>
+</tr>
+<tr>
+<td><code>undertake</code> / <code>undertakes</code></td>
+<td>10</td>
+<td>AFD</td>
+</tr>
+<tr>
+<td><code>requires</code></td>
+<td>7</td>
+<td>AFD, DOS</td>
+</tr>
+<tr>
+<td><code>ensures</code> / <code>ensuring</code></td>
+<td>3</td>
+<td>AFD, ECHO</td>
+</tr>
+<tr>
+<td><code>recommends</code></td>
+<td>1</td>
+<td>AFD</td>
+</tr>
+</tbody>
+</table>
+<p>Note: these are also morphological variants (<code>requiring</code>
+vs <code>required</code>, <code>ensuring</code> vs <code>ensure</code>).
+The taxonomy lists root forms only and does not account for
+conjugations.</p>
+<h3 id="prohibition-phrases-not-in-dead-end-signals">3.4 Prohibition
+Phrases Not in Dead End Signals</h3>
+<p>The following absolute prohibition phrases appear in the data but are
+not in the <code>dead_ends.signals</code> list:</p>
+<ul>
+<li><code>prohibited</code></li>
+<li><code>in no case</code></li>
+<li><code>under no circumstances</code></li>
+<li><code>forbidden</code></li>
+<li><code>ineligible</code></li>
+<li><code>only permitted</code></li>
+</ul>
+<p>All of these function as UNCONDITIONAL dead ends in practice.</p>
+<h3 id="donor-rights-language">3.5 Donor Rights Language</h3>
+<p>The taxonomy has no vocabulary for clauses that grant rights or
+discretion to the <strong>donor</strong> rather than the implementer.
+These appear frequently, especially in GFFO and AFD:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Trigger word</th>
+<th>Example</th>
+<th>Classification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entitled</code></td>
+<td>“The Federal Court of Audit is entitled to audit…”</td>
+<td>DECISION (donor-side)</td>
+</tr>
+<tr>
+<td><code>reserves the right</code></td>
+<td>“The agency reserves the right to revoke the grant…”</td>
+<td>DECISION (donor-side)</td>
+</tr>
+</tbody>
+</table>
+<p>Claude correctly classifies these as DECISION but assigns them to the
+donor actor. The taxonomy has no guidance on this distinction, meaning
+it relies entirely on Claude’s judgment.</p>
+<hr />
+<h2 id="qualifier-gaps">4. Qualifier Gaps</h2>
+<p>The qualifiers list covers common softening phrases but is missing
+several that appear frequently in humanitarian donor documents:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Missing phrase</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unless otherwise agreed</code></td>
+<td>Common bilateral softener in AFD and ECHO agreements</td>
+</tr>
+<tr>
+<td><code>as appropriate</code></td>
+<td>Very common in humanitarian regulatory language</td>
+</tr>
+<tr>
+<td><code>to the extent practicable</code></td>
+<td>Variant of <code>to the extent possible</code> (already in
+taxonomy)</td>
+</tr>
+<tr>
+<td><code>in exceptional circumstances</code></td>
+<td>Used in ECHO to create narrow carve-outs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> <code>in no case</code> looks like a qualifier
+but is actually an <strong>intensifier</strong> — it signals an
+UNCONDITIONAL dead end, not a softened restriction. It should be added
+to <code>dead_ends.signals</code>, not <code>qualifiers</code>.</p>
+<hr />
+<h2 id="domain-gaps">5. Domain Gaps</h2>
+<h3 id="eligibility-is-too-broad">5.1 ELIGIBILITY Is Too Broad</h3>
+<p>With AFD added as the fourth donor, ELIGIBILITY became the first
+domain with UNCONDITIONAL dead ends across multiple donors (AFD: 18,
+DOS: 8, ECHO: 1, GFFO: 1). However, the dead ends mean entirely
+different things:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Donor</th>
+<th>ELIGIBILITY dead end nature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AFD</strong></td>
+<td><em>Actor eligibility</em> — sanctions, debarment, conflict of
+interest, MDB blacklists, embargo compliance</td>
+</tr>
+<tr>
+<td><strong>DOS</strong></td>
+<td><em>Commodity eligibility</em> — pharmaceutical hard walls (specific
+drugs restricted to specific indications)</td>
+</tr>
+<tr>
+<td><strong>ECHO</strong></td>
+<td><em>Standard eligibility</em> — quality assurance floor on medical
+supplies, no derogation possible</td>
+</tr>
+<tr>
+<td><strong>GFFO</strong></td>
+<td><em>Asset eligibility</em> — grant-funded assets must not be
+repurposed during binding period</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Implication:</strong> Reporting “shared UNCONDITIONAL
+ELIGIBILITY” is technically true but analytically misleading. These
+represent three distinct compliance obligations that a humanitarian
+specialist would experience as entirely separate burdens.</p>
+<p><strong>Recommended split:</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>New domain</th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ELIGIBILITY_ACTOR</code></td>
+<td>Who can participate — sanctions, debarment, conflict of interest,
+nationality rules</td>
+</tr>
+<tr>
+<td><code>ELIGIBILITY_COMMODITY</code></td>
+<td>What can be procured — commodity restrictions, pharmaceutical
+indications, quality floors</td>
+</tr>
+<tr>
+<td><code>ELIGIBILITY_ASSET</code></td>
+<td>How funded assets can be used — purpose restrictions, binding
+periods</td>
+</tr>
+</tbody>
+</table>
+<h3 id="missing-integrity-domain">5.2 Missing INTEGRITY Domain</h3>
+<p>AFD has approximately 30 clauses covering conflict of interest,
+anti-corruption certifications, sanctions compliance, and MDB
+blacklists. These are currently absorbed into ELIGIBILITY but represent
+a distinct compliance domain with its own regulatory logic. Suggested
+addition:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>New domain</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INTEGRITY</code></td>
+<td>Anti-corruption, conflict of interest, sanctions compliance,
+debarment, and procurement integrity rules</td>
+</tr>
+</tbody>
+</table>
+<p>This would also allow cross-donor analysis of integrity requirements
+specifically — a high-value view for compliance teams.</p>
+<hr />
+<h2 id="how-claude-goes-beyond-the-taxonomy">6. How Claude Goes Beyond
+the Taxonomy</h2>
+<p>The trigger word data reveals that Claude is operating as a semantic
+reasoner, not a pattern matcher. Evidence:</p>
+<h3 id="compound-modal-understanding">6.1 Compound Modal
+Understanding</h3>
+<p>Claude correctly resolves the semantic category of compound modals
+that the taxonomy does not define:</p>
+<ul>
+<li><code>may only</code> → RESTRICTION (not DECISION)</li>
+<li><code>may not</code> → RESTRICTION / dead end</li>
+<li><code>does not require</code> → inverse obligation (absence of
+restriction)</li>
+<li><code>no derogation may be granted</code> → UNCONDITIONAL dead
+end</li>
+</ul>
+<h3 id="structural-pattern-recognition">6.2 Structural Pattern
+Recognition</h3>
+<p>Claude identifies obligation force from sentence structure, not
+vocabulary. <code>is to be used</code>, <code>are to be submitted</code>
+carry mandatory force in German regulatory translation — Claude
+correctly reads this from syntax.</p>
+<h3 id="semantic-notes-as-reasoning-evidence">6.3 Semantic Notes as
+Reasoning Evidence</h3>
+<p>453 of 475 AFD clauses (95%) contain substantive notes. These are not
+reformulations of the clause — they are Claude’s reasoning about what
+the clause <em>means</em> in compliance terms. Examples:</p>
+<blockquote>
+<p><em>“Absolute prohibition on nationality-based restrictions in
+shortlist preparation.”</em></p>
+</blockquote>
+<blockquote>
+<p><em>“<code>Only</code> signals a dead end; NGO cannot apply exclusion
+lists without DONOR prior approval, creating NGO dependency.”</em></p>
+</blockquote>
+<blockquote>
+<p><em>“Dead end: provisional review creates no financing commitment;
+internal donor process with no direct NGO dependency.”</em></p>
+</blockquote>
+<p>This reasoning goes well beyond what the taxonomy instructs. Claude
+is independently inferring compliance implications.</p>
+<h3 id="actor-inference">6.4 Actor Inference</h3>
+<p>The taxonomy instructs Claude to assign <code>actor: DONOR</code> for
+clauses describing the granting authority’s actions. But it provides no
+vocabulary for this. Claude infers it from context:
+<code>entitled</code>, <code>reserves the right</code>,
+<code>may revoke</code>, <code>is authorised to</code> — none in the
+taxonomy, all correctly assigned to DONOR.</p>
+<h3 id="morphological-generalisation">6.5 Morphological
+Generalisation</h3>
+<p>The taxonomy lists root forms (<code>ensure</code>,
+<code>required</code>, <code>comply</code>). Claude catches all
+conjugated forms: <code>ensuring</code>, <code>requires</code>,
+<code>complied</code>, <code>complying</code>. This is semantic
+generalisation, not string matching.</p>
+<h3 id="inverse-modal-detection">6.6 Inverse Modal Detection</h3>
+<p>Claude correctly identifies clauses that explicitly <em>remove</em>
+an obligation:</p>
+<ul>
+<li><code>does not have to</code> → absence of restriction (relevant for
+DECISION or noting implementer latitude)</li>
+<li><code>does not require</code> → same</li>
+<li><code>no derogation may be granted</code> → paradoxically, this
+removes the possibility of exception — UNCONDITIONAL dead end</li>
+</ul>
+<hr />
+<h2 id="summary-of-recommended-taxonomy-updates">7. Summary of
+Recommended Taxonomy Updates</h2>
+<h3 id="high-priority">High priority</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Change</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add <code>may only</code>, <code>may not</code> to RESTRICTION
+triggers</td>
+<td>Prevents future misclassification if model behaviour changes</td>
+</tr>
+<tr>
+<td>Add <code>prohibited</code>, <code>in no case</code>,
+<code>under no circumstances</code>, <code>forbidden</code>,
+<code>ineligible</code> to dead end signals</td>
+<td>These are UNCONDITIONAL dead ends appearing in the data</td>
+</tr>
+<tr>
+<td>Add <code>certify</code>, <code>undertake</code>,
+<code>undertakes</code> to context_patterns</td>
+<td>25 occurrences across AFD alone</td>
+</tr>
+<tr>
+<td>Split ELIGIBILITY into <code>ELIGIBILITY_ACTOR</code>,
+<code>ELIGIBILITY_COMMODITY</code>, <code>ELIGIBILITY_ASSET</code></td>
+<td>Shared UNCONDITIONAL detection is misleading without this</td>
+</tr>
+</tbody>
+</table>
+<h3 id="medium-priority">Medium priority</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Change</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add <code>unless otherwise agreed</code>,
+<code>as appropriate</code>, <code>to the extent practicable</code> to
+qualifiers</td>
+<td>Common softeners in humanitarian donor language</td>
+</tr>
+<tr>
+<td>Add <code>INTEGRITY</code> domain</td>
+<td>30+ AFD clauses on sanctions, debarment, conflict of interest have
+no proper home</td>
+</tr>
+<tr>
+<td>Add <code>is to be</code>, <code>are to be</code> to trigger
+patterns</td>
+<td>German regulatory English construction — GFFO-specific but
+legitimate</td>
+</tr>
+</tbody>
+</table>
+<h3 id="low-priority-monitor">Low priority (monitor)</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Change</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add <code>entitled</code>, <code>reserves the right</code> as
+DONOR-side trigger vocabulary</td>
+<td>Claude handles these correctly but taxonomy provides no
+guidance</td>
+</tr>
+<tr>
+<td>Add morphological variants to context_patterns</td>
+<td>Claude generalises correctly — low risk, but explicit coverage is
+cleaner</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="conclusion">8. Conclusion</h2>
+<p>The taxonomy is well-designed for its purpose. Its value is in
+defining the conceptual framework and output schema, not in enumerating
+every possible trigger phrase. Claude reliably extends beyond the listed
+vocabulary using semantic understanding of regulatory language.</p>
+<p>The highest-risk gap is the <strong>compound modal problem</strong>
+(<code>may only</code>, <code>may not</code>) — if model behaviour
+drifts, clauses using these patterns could be misclassified as DECISION
+rather than RESTRICTION. Adding them explicitly to the taxonomy would
+make the classification more robust.</p>
+<p>The highest-value structural change is <strong>splitting
+ELIGIBILITY</strong> — this would materially improve the accuracy of
+cross-donor pooling analysis, which is a core use case of the tool.</p>
+</body>
+</html>

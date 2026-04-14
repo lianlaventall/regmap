@@ -1,6 +1,5 @@
 input/
 output/
-reports/
 .env
 __pycache__/
 *.pyc
