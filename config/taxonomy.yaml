@@ -12,19 +12,60 @@ tiers:
       - mandatory
 
   DECISIONS:
-    description: Permissive language — actions that are allowed but not required
+    description: >
+      Permissive language — actions that are allowed but not required, and where
+      no donor preference is stated. Classify into one of four sub-types using the
+      decision_type field:
+        DISCRETIONARY_AUTONOMY — NGO actor, no approval required, no preference signal.
+          Real NGO choice with no strings attached.
+        CONDITIONAL_FLEXIBILITY — NGO actor nominally, but the clause requires prior
+          donor approval before the NGO may proceed. The real decision lives with the
+          donor. Look for phrases like "subject to AFD's prior agreement", "if an
+          exception is approved", "with the agreement of".
+        DONOR_RESERVED — DONOR actor. The donor retains a right to act or intervene.
+          Not an NGO choice. Look for "reserves the right to", "is entitled to",
+          "may declare", "may suspend", "may revoke".
+        null — use null when tier is not DECISION.
     trigger_words:
       - may
       - can
 
   HIGH_RISK:
-    description: Recommendatory language — soft obligations that carry compliance risk
+    description: >
+      Recommendatory language that carries compliance risk — soft obligations where
+      non-compliance creates audit exposure even without an explicit mandate.
+      Use HIGH_RISK when the clause implies consequences for non-compliance or
+      signals an expectation the donor will verify.
+      Do NOT use HIGH_RISK for clauses where the NGO has genuine discretion and
+      the donor is simply stating a preference — use GUIDED_DISCRETION instead.
+      The test: does deviation from this clause create audit or enforcement risk?
+      If yes → HIGH_RISK. If no, it is just a preference → GUIDED_DISCRETION.
+    trigger_words:
+      - should
+      - ideally
+
+  GUIDED_DISCRETION:
+    description: >
+      The NGO has genuine discretion — no mandate, no approval required — but the
+      donor has stated what they prefer. The NGO is free to deviate; the preference
+      is on record. Carries no direct compliance risk in isolation.
+      Use GUIDED_DISCRETION when ALL of the following are true:
+        1. The clause is permissive (no must/shall/required anywhere in the clause).
+        2. The NGO does not need prior donor approval to proceed.
+        3. The donor has explicitly stated a preference, recommendation, or lean.
+      If a mandate exists anywhere in the clause (even softened by "whenever possible"),
+      classify as QUALIFIED_RESTRICTION instead.
+      Populate the preference_signal field with the substance of what the donor prefers.
     trigger_words:
       - recommended
       - suggested
       - encouraged
-      - should
-      - ideally
+      - strongly encouraged
+      - it is recommended
+      - it is advisable
+      - is advised
+      - it is good practice
+      - it is helpful
 
 qualifiers:
   description: >
@@ -89,6 +130,12 @@ dead_ends:
       - not permitted
       - not allowed
       - cannot be
+      - prohibited
+      - in no case
+      - under no circumstances
+      - forbidden
+      - ineligible
+      - only permitted
 
 domains:
   description: >
@@ -102,8 +149,23 @@ domains:
       description: Obligations to submit data, reports, or notifications
     RECORD_KEEPING:
       description: Retention, documentation, and audit trail requirements
-    ELIGIBILITY:
-      description: Who or what qualifies under the agreement
+    ELIGIBILITY_ACTOR:
+      description: >
+        Who can participate — sanctions lists, debarment, MDB blacklists,
+        nationality rules, status disqualification
+    ELIGIBILITY_COMMODITY:
+      description: >
+        What can be procured — commodity restrictions, pharmaceutical
+        indications, product quality standards and floors
+    ELIGIBILITY_ASSET:
+      description: >
+        How funded assets can be used — purpose restrictions,
+        binding periods, repurposing prohibitions
+    INTEGRITY:
+      description: >
+        Procurement integrity and fraud prevention — conflict of interest,
+        anti-corruption certifications, falsification prohibitions,
+        competition distortion rules. A proxy for donor risk culture.
     FINANCIAL:
       description: Budget, spend, reimbursement, or audit rules
     SAFEGUARDING:

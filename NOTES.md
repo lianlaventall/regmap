@@ -1,5 +1,138 @@
 # Session Notes — regmap
 
+## Session 2026-04-14 — DECISION sub-typing, GUIDED_DISCRETION, schema + taxonomy changes
+
+### Analytical work
+
+Full review of all 64 DECISION clauses across 4 donors (DOS: 3, ECHO: 5, GFFO: 8, AFD: 48).
+
+**Core finding:** DECISION as a tier conflates three structurally different things — NGO autonomy, approval-gated flexibility, and donor enforcement rights. Raw DECISION counts are not a reliable measure of NGO decision space.
+
+**DECISION sub-types defined:**
+
+| Sub-type | Who decides | Approval needed | Notes |
+|---|---|---|---|
+| `DISCRETIONARY_AUTONOMY` | NGO | No | Real NGO choice, no strings |
+| `CONDITIONAL_FLEXIBILITY` | NGO nominally | Yes — prior donor approval | Approval-gated; real decision is donor's |
+| `DONOR_RESERVED` | Donor | N/A | Donor enforcement/intervention right; not NGO choice |
+
+**Real NGO decision space** (DISCRETIONARY_AUTONOMY only, estimated pre-rerun):
+
+| Donor | Raw DECISION | Est. real NGO discretion |
+|---|---|---|
+| DOS | 3 | ~1 |
+| ECHO | 5 | ~5 |
+| GFFO | 8 | ~2 |
+| AFD | 48 | ~15–20 |
+
+**GUIDED_DISCRETION — new tier identified:**
+
+Pattern found in ~13 clauses (11 AFD, 1 DOS, 1 ECHO): NGO has genuine discretion, no approval required, but donor has stated a preference. Currently misclassified as HIGH_RISK (9 clauses) or QUALIFIED_RESTRICTION (2 clauses).
+
+Distinct from HIGH_RISK (which implies audit risk on non-compliance) and from DECISION (which has no preference signal). Sits on the discretion side of the taxonomy but with a donor lean attached.
+
+ECHO-020 edge case: "whenever possible and advisable, priority must be given..." → QUALIFIED_RESTRICTION, not GUIDED_DISCRETION. The `must` makes it a restriction regardless of the softener. Resolved — no impact on data.
+
+**GUIDED_DISCRETION is almost entirely an AFD phenomenon** in this dataset, concentrated in PROCUREMENT. Signals AFD uses soft recommendation as a governance tool — institutional views stated without formal mandate.
+
+**Full tier ladder (obligation → discretion):**
+```
+RESTRICTION              → must, no choice
+QUALIFIED_RESTRICTION    → must, softened by context
+HIGH_RISK                → should, audit risk if ignored
+GUIDED_DISCRETION        → may, donor preference stated
+DECISION                 → may, genuinely free choice
+```
+
+### Donor culture analysis
+
+Key profiles derived from data:
+- **DOS** — compliance is the relationship. 97.3% obligation. DECISION clauses are all approval-gated.
+- **ECHO** — we set the floor; you run the operation. 19.2% real discretion, nearly all DISCRETIONARY_AUTONOMY.
+- **GFFO** — binary and legalistic. Zero QUALIFIED_RESTRICTION, zero HIGH_RISK. Hard mandates or free choice, no gray zones.
+- **AFD** — procedural depth with embedded preference culture. Most complex dataset, highest GUIDED_DISCRETION density.
+
+INTEGRITY clause density = proxy for donor risk culture (institutional trust vs. distrust of implementers). High count signals preoccupation with fraud risk. Analytically distinct from general RESTRICTION count.
+
+Full analysis + harmonization framing written to `reports/taxonomy_and_donor_culture.md`.
+
+### Taxonomy changes applied (`config/taxonomy.yaml`)
+
+1. **GUIDED_DISCRETION** — new tier added with trigger signals, three required conditions, boundary rule against QUALIFIED_RESTRICTION, instruction to populate `preference_signal`
+2. **DECISIONS** — expanded with explicit sub-type classification instructions for the classifier (DISCRETIONARY_AUTONOMY / CONDITIONAL_FLEXIBILITY / DONOR_RESERVED)
+3. **HIGH_RISK** — tightened with boundary rule: if deviation carries no audit/enforcement risk → GUIDED_DISCRETION. Removed `recommended`/`encouraged`/`suggested` from trigger words.
+
+### Schema changes applied (`schemas/output_schema.json`)
+
+1. `tier` enum — added `GUIDED_DISCRETION`
+2. `domain` enum — replaced `ELIGIBILITY` with `ELIGIBILITY_ACTOR`, `ELIGIBILITY_COMMODITY`, `ELIGIBILITY_ASSET`; added `INTEGRITY` (bug fix — schema was stale since last taxonomy revision)
+3. `decision_type` — new required field: `DISCRETIONARY_AUTONOMY | CONDITIONAL_FLEXIBILITY | DONOR_RESERVED | null`
+4. `preference_signal` — new required field: string (donor's stated preference) or null. GUIDED_DISCRETION only.
+
+### Classifier changes applied (`src/classifier.py`)
+
+- Updated to five tiers
+- Added BOUNDARY RULES section (HIGH_RISK vs GUIDED_DISCRETION, QUALIFIED_RESTRICTION vs GUIDED_DISCRETION)
+- Added DECISION SUB-TYPING section with lookup phrases for each sub-type
+- Added GUIDED DISCRETION PREFERENCE SIGNAL section
+- Updated JSON shape: added `decision_type`, `preference_signal`; fixed `tier` and `domain` enums
+- Committed and pushed to main (96ee66b)
+
+### Still to do
+
+- Pipeline rerun — all 4 donors stale (taxonomy revised 2026-04-13, classifier revised 2026-04-14)
+
+---
+
+## Session 2026-04-13 (continued) — Taxonomy revision
+
+### Taxonomy analysis
+
+Ran a full analysis of `config/taxonomy.yaml` against the 4-donor dataset. Two questions: (1) does it capture everything? (2) how does Claude go beyond it?
+
+Full analysis saved to `reports/taxonomy_analysis_2026-04-13.txt`.
+
+**Key finding — taxonomy functions as a calibration frame, not a ruleset.**
+Claude extends well beyond the listed trigger words through semantic reasoning (compound modals, structural patterns, morphological generalisation). Strengthening trigger words has low analytical value because Claude already handles them correctly.
+
+**Higher-value changes are in domains**, where taxonomy gaps produce false positives in cross-donor pooling analysis.
+
+### Taxonomy changes applied
+
+**Domains — ELIGIBILITY split (3 → 1 new)**
+
+`ELIGIBILITY` was too broad — it was grouping three distinct compliance concerns into one domain, producing misleading "shared UNCONDITIONAL" signals:
+
+| Old | New | What it covers |
+|---|---|---|
+| ELIGIBILITY | `ELIGIBILITY_ACTOR` | Who can participate: sanctions, debarment, MDB blacklists, nationality rules |
+| ELIGIBILITY | `ELIGIBILITY_COMMODITY` | What can be procured: commodity restrictions, pharmaceutical indications, quality floors |
+| ELIGIBILITY | `ELIGIBILITY_ASSET` | How funded assets can be used: purpose restrictions, binding periods |
+
+**Domains — INTEGRITY added**
+
+New domain capturing procurement integrity and fraud prevention: conflict of interest, anti-corruption certifications, falsification prohibitions, competition distortion rules.
+
+**Why:** Regulation exists largely to prevent fraud. INTEGRITY clause density is a direct proxy for donor risk culture — a donor with 30 INTEGRITY clauses signals deep institutional distrust of implementers; one with 2 signals a partnership model. This is a distinct analytical lens that general RESTRICTION count does not provide.
+
+AFD has ~30 clauses that were previously misclassified as ELIGIBILITY that belong here.
+
+**Dead end signals — 6 phrases added**
+
+Added: `prohibited`, `in no case`, `under no circumstances`, `forbidden`, `ineligible`, `only permitted`
+
+These appear in the data and signal UNCONDITIONAL dead ends but were absent from the signals list. Adding them makes dead-end detection more robust across donor languages.
+
+**What was NOT changed (and why)**
+
+Trigger words and qualifiers were left unchanged. Claude already handles compound modals (`may only`, `may not`), obligation constructions (`is to be`), and morphological variants correctly through semantic reasoning. Adding them to the taxonomy is defensive but has near-zero impact on current output.
+
+### Pipeline re-run
+
+Not yet run. Existing output JSONs still use old `ELIGIBILITY` domain. Re-run all 4 donors before next analysis pass.
+
+---
+
 ## Session 2026-04-13
 
 ### Goal
