@@ -85,12 +85,14 @@ The most analytically powerful combination: `tier` × `actor` × `decision_type`
 
 ### Tier Distribution
 
-| Donor | Obligation | Discretion | Total |
-|---|---|---|---|
-| DOS | 107 (97.3%) | 3 (2.7%) | 110 |
-| ECHO | 21 (80.8%) | 5 (19.2%) | 26 |
-| GFFO | 48 (85.7%) | 8 (14.3%) | 56 |
-| AFD | 427 (89.9%) | 48 (10.1%) | 475 |
+| Donor | Obligation (R+QR+HR) | GUIDED_DISCRETION | DECISION | Total |
+|---|---|---|---|---|
+| DOS | 160 (93.0%) | 5 (2.9%) | 7 (4.1%) | 172 |
+| ECHO | 24 (77.4%) | 0 (0%) | 7 (22.6%) | 31 |
+| GFFO | 48 (82.8%) | 0 (0%) | 10 (17.2%) | 58 |
+| AFD | 423 (82.9%) | 20 (3.9%) | 67 (13.1%) | 510 |
+
+*Updated 2026-04-14 following pipeline rerun with revised taxonomy, schema, and extractor improvements.*
 
 *Note: AFD's DECISION count includes ~21 DONOR_RESERVED clauses and ~15 CONDITIONAL_FLEXIBILITY clauses. Real NGO discretion (DISCRETIONARY_AUTONOMY + GUIDED_DISCRETION) is meaningfully smaller. Post-rerun numbers will reflect this.*
 
@@ -101,16 +103,16 @@ Every donor agreement in this dataset is primarily a constraint document. This i
 ### Per-Donor Culture Profiles
 
 **DOS (USAID) — Control through eligibility and approval gates**
-97.3% obligation. The three DECISION clauses are all approval-gated (`CONDITIONAL_FLEXIBILITY`) — when DOS appears to give the NGO a choice, it has already reserved the right to override. Zero GUIDED_DISCRETION. The drafting is specific, dense, and concentrated in PROCUREMENT and ELIGIBILITY. Donor culture reads as: *compliance is the relationship*.
+88.4% RESTRICTION, 172 total clauses. Only 1 `DISCRETIONARY_AUTONOMY` clause — everything else is either a hard mandate, approval-gated, or `DONOR_RESERVED`. 5 `GUIDED_DISCRETION` clauses now detected, all in PROCUREMENT (advisory vendor list references, negotiation guidance). Dominant domain is `ELIGIBILITY_COMMODITY` (97 clauses, 56%) — DOS regulates *what* can be procured more than any other dimension. Donor culture reads as: *compliance is the relationship*.
 
 **ECHO (EU) — Operational autonomy as a design principle**
-The outlier. 19.2% DECISION, and nearly all of those are `DISCRETIONARY_AUTONOMY` — genuine NGO choice without approval or preference signal. ECHO's restrictions are real (18 hard RESTRICTIONs) but the document also explicitly carves out spaces where the NGO decides. Zero GUIDED_DISCRETION. Donor culture reads as: *we set the floor; you run the operation*.
+The outlier. 31 clauses total — smallest dataset but highest discretion ratio. 5 DECISION clauses, all `DISCRETIONARY_AUTONOMY` — genuine NGO choice without approval or preference signal. Zero `GUIDED_DISCRETION`. ECHO's restrictions are real but the document explicitly carves out spaces where the NGO decides. Dominant domain is PROCUREMENT (12 clauses) and ELIGIBILITY_COMMODITY (8). Donor culture reads as: *we set the floor; you run the operation*.
 
 **GFFO (Germany) — Binary and legalistic**
-The most structurally simple donor in the dataset. Zero QUALIFIED_RESTRICTION, zero HIGH_RISK. Every clause is either a hard mandate or a free choice — no gray zones, no softeners, no preference signals. DECISION clauses split roughly between NGO operational flexibility (budget reallocation within limits) and explicit DONOR_RESERVED enforcement rights (right to revoke, right to audit). Donor culture reads as: *the rules are clear; the relationship is formal*.
+58 clauses. The most structurally simple donor in the dataset — 2 QUALIFIED_RESTRICTIONs, zero HIGH_RISK, zero GUIDED_DISCRETION. Every clause is either a hard mandate or a choice. DECISION clauses split 4 `DISCRETIONARY_AUTONOMY` vs 6 `DONOR_RESERVED` — revocation rights, audit rights, interest charges. Dominant domain is REPORTING (23 clauses, 40%). Donor culture reads as: *the rules are clear; the relationship is formal*.
 
 **AFD (France) — Procedural depth with embedded preference culture**
-The largest dataset by far (475 clauses vs. 26–110 for others). AFD has the most QUALIFIED_RESTRICTIONs (41), the most HIGH_RISK (40), and the most DECISION (48) — which means it also has the most ambiguity. Eleven GUIDED_DISCRETION clauses, almost all in PROCUREMENT, signal that AFD uses soft recommendation as a governance tool — telling implementers what good practice looks like while preserving formal discretion. The DONOR_RESERVED clause density is also high (~15 of the 48 DECISION clauses). Donor culture reads as: *we have strong institutional views on process, and we will make them known even when we can't mandate them*.
+510 clauses — by far the largest dataset. 20 `GUIDED_DISCRETION` clauses, all in PROCUREMENT, each with a captured `preference_signal` (e.g. "use AFD standard bidding documents", "maximise use of ex-post reviews", "recruit a dedicated Tender Officer"). DECISION sub-typing: 34 `DISCRETIONARY_AUTONOMY`, 20 `DONOR_RESERVED`, 13 `CONDITIONAL_FLEXIBILITY` — raw DECISION count of 67 overstates NGO flexibility by 2x. Dominant domain is PROCUREMENT (316 clauses, 62%). Donor culture reads as: *we have strong institutional views on process, and we will make them known even when we can't mandate them*.
 
 ---
 
@@ -126,14 +128,16 @@ High INTEGRITY clause density signals institutional distrust of implementers. It
 
 Once `DONOR_RESERVED` and `CONDITIONAL_FLEXIBILITY` clauses are stripped out, the actual space where an NGO makes a free, unencumbered choice is much smaller than raw DECISION counts suggest:
 
-| Donor | Raw DECISION | Est. real NGO discretion (DISCRETIONARY_AUTONOMY + GUIDED_DISCRETION) |
-|---|---|---|
-| DOS | 3 | ~1 |
-| ECHO | 5 | ~5 |
-| GFFO | 8 | ~2 |
-| AFD | 48 | ~25–30 |
+| Donor | Raw DECISION | DISCRETIONARY_AUTONOMY | GUIDED_DISCRETION | Real NGO space | % of total |
+|---|---|---|---|---|---|
+| DOS | 7 | 1 | 5 | 6 | 3.5% |
+| ECHO | 7 | 5 | 0 | 5 | 16.1% |
+| GFFO | 10 | 4 | 0 | 4 | 6.9% |
+| AFD | 67 | 34 | 20 | 54 | 10.6% |
 
-ECHO has the highest ratio of real discretion to total clauses. DOS has almost none.
+*Updated 2026-04-14 with post-rerun actuals.*
+
+ECHO has the highest ratio of real discretion to total clauses and the cleanest decision space — all `DISCRETIONARY_AUTONOMY`, no approval gating. DOS has almost none. AFD's 54-clause real NGO space is the largest in absolute terms but is embedded in a 510-clause document, and 20 of those 54 are preference-signaled rather than truly free.
 
 ---
 
@@ -183,4 +187,4 @@ This reframes harmonization as a quality and predictability argument, not a burd
 
 ---
 
-*Report reflects analysis as of 2026-04-14. Output JSONs are stale pending pipeline rerun following taxonomy revision (ELIGIBILITY split, INTEGRITY domain added, GUIDED_DISCRETION tier added). Findings will be updated following rerun.*
+*Report reflects analysis as of 2026-04-14. All 4 donors rerun with revised taxonomy (ELIGIBILITY split, INTEGRITY domain, GUIDED_DISCRETION tier), updated schema (decision_type, preference_signal fields), and improved extractor (table handling, annotation layer, header/footer stripping, text normalization). Total corpus: 771 clauses across DOS (172), AFD (510), ECHO (31), GFFO (58).*
