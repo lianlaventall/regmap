@@ -103,6 +103,72 @@ After all pages extracted, counts line frequency across pages. Lines appearing o
 
 ---
 
+## Session 2026-04-14 (continued) — Pipeline reruns, viz fixes, Plotly scorecard
+
+### Pipeline reruns (all 4 donors, improved extractor + new taxonomy)
+
+All donors rerun with:
+- New extractor (table-aware extraction, annotation layer, normalization, header/footer stripping)
+- New taxonomy (GUIDED_DISCRETION tier, DECISION sub-types, INTEGRITY domain, ELIGIBILITY split)
+
+| Donor | Clauses | Notes |
+|---|---|---|
+| ECHO | 31 | +5 vs prior run; new table extraction surfaced additional clauses |
+| GFFO | 58 | +2 vs prior run |
+| DOS | 172 | +62 vs prior run; header/footer stripping significantly reduced token noise |
+| AFD | 510 | +35 vs prior run; AFD benefits most from header/footer stripping (large docs) |
+
+**Total corpus: 771 clauses** across 4 donors.
+
+### Sankey fixes (`src/sankey.py`)
+
+Four issues resolved:
+1. GFFO and AFD were rendering in gray — both missing from `DONOR_COLORS` in Python and JS. Added `GFFO: "#9b59b6"`, `AFD: "#f39c12"` to both.
+2. GUIDED_DISCRETION missing from `TIER_COLORS` → added `"#27ae60"`.
+3. `DOMAIN_ORDER` and `TIER_ORDER` updated for new taxonomy (ELIGIBILITY split, INTEGRITY, GUIDED_DISCRETION).
+4. Legend overlapping chart — repositioned from `bottom: 20px; left: 20px` to `top: 66px; right: 20px`. Chart extent narrowed from `width - 160` to `width - 260`.
+5. JS `replace("_"," ")` was only replacing the first underscore — fixed with `/_/g` regex.
+6. Donor legend now built dynamically from `DATA.nodes` (layer === 0) instead of hard-coded.
+
+### Heatmap fixes (`src/heatmap.py`)
+
+Two structural issues resolved:
+1. **4-donor overlap** — old `flex` layout with `min-width: 300px` didn't fit 4 donors side-by-side. Switched to `display: grid; grid-template-columns: repeat(2, minmax(0, 1fr))` (2×2 layout).
+2. **Column headers too wide** — domain names on x-axis caused overflow. Fixed with `writing-mode: vertical-rl; transform: rotate(180deg); height: 90px`. Cell size reduced from 80px → 44px.
+3. GUIDED_DISCRETION added to `TIERS` list and `TIER_COLORS` JS constant.
+4. Pooling callout now uses dynamic `${Object.keys(DATA.donors).length}` donor count.
+
+### Scorecard created (`src/scorecard.py`) — new file
+
+New Plotly-based compliance scorecard. Plotly chosen over D3 for: Python-native rendering, no layout/sizing bugs, web-app-ready output, clean color-coding API.
+
+**10 metrics × 4 donors:**
+
+| Metric | Key | Color logic |
+|---|---|---|
+| Total Clauses | total | neutral |
+| Obligation Rate | obligation_rate | green→red |
+| Hard Restriction Rate | restriction_rate | green→red |
+| Real NGO Autonomy | autonomy_rate | red→green |
+| Preference Signaling | guided_rate | neutral→amber |
+| INTEGRITY Density | integrity_rate | neutral→amber |
+| Domain Breadth | domain_breadth | neutral→blue |
+| Approval Gating | approval_gating | green→red |
+| NGO Dependencies | ngo_deps | neutral→amber (relative) |
+| Top Domain | top_domain | neutral |
+
+Color interpolation via `_scale_color(value, low_color, high_color)` → rgba cells. Output: `output/scorecard.html`.
+
+### Spider chart (`src/spider.py`) — created then deleted
+
+Plotly radar chart was built (5 metrics per donor, overlaid), then deleted by user request. No artifacts remain.
+
+### Plotly installed
+
+`plotly` v6.7.0 added to `.venv`. Required proxy clear (`ALL_PROXY= all_proxy= ...`) for SSL during install.
+
+---
+
 ## Session 2026-04-13 (continued) — Taxonomy revision
 
 ### Taxonomy analysis
