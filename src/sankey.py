@@ -17,20 +17,23 @@ OUTPUT_DIR = Path("output")
 SANKEY_PATH = OUTPUT_DIR / "sankey.html"
 
 TIER_COLORS = {
-    "RESTRICTION":          "#c0392b",
-    "HIGH_RISK":            "#d35400",
-    "DECISION":             "#2980b9",
-    "QUALIFIED_RESTRICTION":"#8e44ad",
+    "RESTRICTION":           "#c0392b",
+    "HIGH_RISK":             "#d35400",
+    "DECISION":              "#2980b9",
+    "QUALIFIED_RESTRICTION": "#8e44ad",
+    "GUIDED_DISCRETION":     "#27ae60",
 }
 DONOR_COLORS = {
     "DOS":  "#1abc9c",
     "ECHO": "#e67e22",
+    "GFFO": "#9b59b6",
+    "AFD":  "#f39c12",
 }
 DOMAIN_ORDER = [
-    "PROCUREMENT", "ELIGIBILITY", "REPORTING",
-    "FINANCIAL", "RECORD_KEEPING", "SAFEGUARDING", "SCOPE"
+    "PROCUREMENT", "ELIGIBILITY_ACTOR", "ELIGIBILITY_COMMODITY", "ELIGIBILITY_ASSET",
+    "INTEGRITY", "REPORTING", "FINANCIAL", "RECORD_KEEPING", "SAFEGUARDING", "SCOPE"
 ]
-TIER_ORDER = ["RESTRICTION", "HIGH_RISK", "QUALIFIED_RESTRICTION", "DECISION"]
+TIER_ORDER = ["RESTRICTION", "HIGH_RISK", "QUALIFIED_RESTRICTION", "GUIDED_DISCRETION", "DECISION"]
 
 
 def build_sankey_data() -> dict:
@@ -206,17 +209,20 @@ const TIER_COLORS = {
   HIGH_RISK:             "#d35400",
   DECISION:              "#2980b9",
   QUALIFIED_RESTRICTION: "#8e44ad",
+  GUIDED_DISCRETION:     "#27ae60",
 };
-const DONOR_COLORS = { DOS: "#1abc9c", ECHO: "#e67e22" };
+const DONOR_COLORS = { DOS: "#1abc9c", ECHO: "#e67e22", GFFO: "#9b59b6", AFD: "#f39c12" };
 
 // ── legend ───────────────────────────────────────────────────────────────────
-Object.entries(DONOR_COLORS).forEach(([d, c]) => {
+// build donor legend dynamically from data
+const donorNodes = DATA.nodes.filter(n => n.layer === 0);
+donorNodes.forEach(n => {
   document.getElementById("donor-legend").insertAdjacentHTML("beforeend",
-    `<div class="legend-item"><div class="legend-dot" style="background:${c}"></div>${d}</div>`);
+    `<div class="legend-item"><div class="legend-dot" style="background:${n.color}"></div>${n.name}</div>`);
 });
 Object.entries(TIER_COLORS).forEach(([t, c]) => {
   document.getElementById("tier-legend").insertAdjacentHTML("beforeend",
-    `<div class="legend-item"><div class="legend-dot" style="background:${c}"></div>${t.replace("_"," ")}</div>`);
+    `<div class="legend-item"><div class="legend-dot" style="background:${c}"></div>${t.replace(/_/g," ")}</div>`);
 });
 
 // ── tooltip ───────────────────────────────────────────────────────────────────
