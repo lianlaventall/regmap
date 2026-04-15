@@ -78,9 +78,28 @@ Full analysis + harmonization framing written to `reports/taxonomy_and_donor_cul
 - Updated JSON shape: added `decision_type`, `preference_signal`; fixed `tier` and `domain` enums
 - Committed and pushed to main (96ee66b)
 
+### Extractor improvements (`src/extractor.py`) — committed 67e221b
+
+Rewrote extractor with four improvements, all contained to `extractor.py`. Pipeline interface unchanged.
+
+**1. Table-aware extraction**
+pdfplumber's `find_tables()` detects table regions per page. Non-table text extracted separately via `page.filter()` to exclude table bboxes. Tables formatted as pipe-delimited `[TABLE]...[/TABLE]` blocks and appended to page text. Falls back to plain `extract_text()` on failure. Confirmed working on ECHO: 3 tables detected on pages 4, 8, 12.
+
+**2. Annotation layer extraction**
+Extracts PDF sticky notes and comments via `page.annots` → `data.Contents`. Appended as `[ANNOTATIONS]` block. GFFO "Annotated" filename refers to image annotations (not PDF layer) — handled gracefully with no output.
+
+**3. Text normalization**
+- Fixes hyphenation at line breaks (`obli-\ngation` → `obligation`)
+- Strips standalone page number lines (`- 12 -`, `Page 3 of 45`)
+- Strips visual separator lines (`----`, `====`)
+- Collapses 3+ blank lines to one
+
+**4. Header/footer stripping**
+After all pages extracted, counts line frequency across pages. Lines appearing on >40% of pages (min 3) are boilerplate and stripped. Reduces token noise on large documents — particularly relevant for AFD.
+
 ### Still to do
 
-- Pipeline rerun — all 4 donors stale (taxonomy revised 2026-04-13, classifier revised 2026-04-14)
+- Pipeline rerun — all 4 donors stale. ECHO already rerun once (pre-extractor improvements), needs rerun again with new extractor.
 
 ---
 
