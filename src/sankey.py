@@ -166,10 +166,10 @@ header p  { font-size: .8rem; color: #888; }
 #tooltip .tt-de  { color: #e67e22; font-size: .67rem; }
 
 #legend {
-  position: fixed; bottom: 20px; left: 20px;
+  position: fixed; top: 66px; right: 20px;
   background: #1a1d27cc; border: 1px solid #2a2d3e;
   border-radius: 8px; padding: 12px 16px; font-size: .75rem;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px); max-width: 220px;
 }
 #legend h3 {
   font-size: .68rem; color: #666; text-transform: uppercase;
@@ -271,7 +271,7 @@ const sankeyLayout = sankey()
   .nodeId(d => d.name)
   .nodeWidth(18)
   .nodePadding(14)
-  .extent([[60, 20], [width - 160, height - 20]]);
+  .extent([[60, 20], [width - 260, height - 20]]);
 
 // deep-clone to avoid mutation
 const graph = sankeyLayout({
