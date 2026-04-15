@@ -19,9 +19,12 @@ from pathlib import Path
 OUTPUT_DIR = Path("output")
 HEATMAP_PATH = OUTPUT_DIR / "heatmap.html"
 
-TIERS = ["RESTRICTION", "HIGH_RISK", "DECISION", "QUALIFIED_RESTRICTION"]
+TIERS = ["RESTRICTION", "QUALIFIED_RESTRICTION", "HIGH_RISK", "GUIDED_DISCRETION", "DECISION"]
 DEAD_END_TYPES = ["UNCONDITIONAL", "CONDITIONAL", "AMBIGUOUS"]
-DOMAINS = ["PROCUREMENT", "ELIGIBILITY", "REPORTING", "FINANCIAL", "RECORD_KEEPING", "SAFEGUARDING", "SCOPE"]
+DOMAINS = [
+    "PROCUREMENT", "ELIGIBILITY_ACTOR", "ELIGIBILITY_COMMODITY", "ELIGIBILITY_ASSET",
+    "INTEGRITY", "REPORTING", "FINANCIAL", "RECORD_KEEPING", "SAFEGUARDING", "SCOPE"
+]
 
 
 def build_heatmap_data() -> dict:
@@ -222,10 +225,11 @@ table.heatmap td .cell-pct  { font-size: .68rem; color: rgba(255,255,255,.55); }
 const DATA = __HEATMAP_DATA__;
 
 const TIER_COLORS = {
-  RESTRICTION:          "#c0392b",
-  HIGH_RISK:            "#d35400",
-  DECISION:             "#2980b9",
-  QUALIFIED_RESTRICTION:"#8e44ad",
+  RESTRICTION:           "#c0392b",
+  QUALIFIED_RESTRICTION: "#8e44ad",
+  HIGH_RISK:             "#d35400",
+  GUIDED_DISCRETION:     "#27ae60",
+  DECISION:              "#2980b9",
 };
 
 const DE_COLORS = {
@@ -296,7 +300,7 @@ function buildTable(donorKey, donorData, cols, colorMap, cellKey) {
   hr.appendChild(thEmpty);
   cols.forEach(col => {
     const th = document.createElement("th");
-    th.textContent = col.replace("_", " ");
+    th.textContent = col.replace(/_/g, " ");
     th.style.color = colorMap[col] || "#aaa";
     hr.appendChild(th);
   });
@@ -309,7 +313,7 @@ function buildTable(donorKey, donorData, cols, colorMap, cellKey) {
     const row = tbody.insertRow();
     const domainCell = row.insertCell();
     domainCell.className = "domain-label" + (sharedSet.has(domain) ? " shared-unconditional" : "");
-    domainCell.innerHTML = domain + (sharedSet.has(domain) ? `<span class="shared-badge">↔ shared</span>` : "");
+    domainCell.innerHTML = domain.replace(/_/g, " ") + (sharedSet.has(domain) ? `<span class="shared-badge">↔ shared</span>` : "");
 
     const cellMap = donorData[cellKey][domain] || {};
 
@@ -378,7 +382,7 @@ function renderDensity() {
   DATA.tiers.forEach(t => {
     const item = document.createElement("div");
     item.className = "legend-item";
-    item.innerHTML = `<div class="legend-swatch" style="background:${TIER_COLORS[t]}"></div>${t.replace("_"," ")}`;
+    item.innerHTML = `<div class="legend-swatch" style="background:${TIER_COLORS[t]}"></div>${t.replace(/_/g," ")}`;
     legend.appendChild(item);
   });
   if (sharedSet.size > 0) {
@@ -436,8 +440,8 @@ function renderDeadEnds() {
     callout.innerHTML = `
       <div style="font-size:.75rem;color:#f1c40f;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Cross-donor pooling candidates</div>
       <div style="font-size:.82rem;color:#ccc;line-height:1.6;">
-        Domains with UNCONDITIONAL dead ends in <strong>both donors</strong>:
-        <strong style="color:#f1c40f">${[...sharedSet].join(", ")}</strong>.
+        Domains with UNCONDITIONAL dead ends across <strong>all ${Object.keys(DATA.donors).length} donors</strong>:
+        <strong style="color:#f1c40f">${[...sharedSet].map(d => d.replace(/_/g," ")).join(", ")}</strong>.
         These are the strongest candidates for a shared compliance baseline.
       </div>
     `;
@@ -447,7 +451,7 @@ function renderDeadEnds() {
     callout.style.cssText = "background:#1a1d27;border:1px solid #2a2d3e;border-radius:8px;padding:16px 20px;max-width:600px;margin-top:24px;";
     callout.innerHTML = `
       <div style="font-size:.82rem;color:#888;line-height:1.6;">
-        No domains currently share UNCONDITIONAL dead ends across both donors.
+        No domains currently share UNCONDITIONAL dead ends across all ${Object.keys(DATA.donors).length} donors.
         Cross-donor pooling will require domain-level normalization first.
       </div>
     `;
