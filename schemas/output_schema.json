@@ -31,7 +31,7 @@
       "description": "All classified clauses extracted from the document",
       "items": {
         "type": "object",
-        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "actor", "decision_type", "preference_signal", "creates_ngo_dependency", "dead_end", "dead_end_type", "domain", "notes"],
+        "required": ["clause_id", "text", "page", "trigger_word", "tier", "context_flag", "actor", "decision_type", "donor_right_type", "contains_donor_right", "preference_signal", "preference_strength", "creates_ngo_dependency", "dead_end", "dead_end_type", "domain", "notes"],
         "properties": {
           "clause_id": {
             "type": "string",
@@ -55,8 +55,8 @@
           },
           "tier": {
             "type": "string",
-            "enum": ["RESTRICTION", "QUALIFIED_RESTRICTION", "DECISION", "HIGH_RISK", "GUIDED_DISCRETION"],
-            "description": "Classification tier from the taxonomy",
+            "enum": ["RESTRICTION", "QUALIFIED_RESTRICTION", "GUIDED_DISCRETION", "DECISION", "DONOR_RIGHT"],
+            "description": "Classification tier. RESTRICTION/QUALIFIED_RESTRICTION/GUIDED_DISCRETION/DECISION are the NGO obligation ladder. DONOR_RIGHT is a separate axis for donor power clauses.",
             "example": "RESTRICTION"
           },
           "context_flag": {
@@ -67,39 +67,56 @@
           "actor": {
             "type": "string",
             "enum": ["NGO", "DONOR"],
-            "description": "Who bears the obligation: NGO (default) or DONOR/Commission",
+            "description": "Who bears the obligation or exercises the power: NGO (default) or DONOR",
             "example": "NGO"
           },
           "decision_type": {
             "type": ["string", "null"],
-            "enum": ["DISCRETIONARY_AUTONOMY", "CONDITIONAL_FLEXIBILITY", "DONOR_RESERVED", null],
-            "description": "Sub-type of DECISION clauses. DISCRETIONARY_AUTONOMY: NGO actor, free choice, no approval needed. CONDITIONAL_FLEXIBILITY: NGO nominally but requires prior donor approval. DONOR_RESERVED: donor retains a right to act; not an NGO choice. Null for all non-DECISION tiers.",
+            "enum": ["DISCRETIONARY_AUTONOMY", "CONDITIONAL_FLEXIBILITY", null],
+            "description": "Sub-type of DECISION clauses only. DISCRETIONARY_AUTONOMY: real NGO choice, no approval needed. CONDITIONAL_FLEXIBILITY: NGO nominally but requires prior donor approval. Null for all non-DECISION tiers.",
             "example": null
+          },
+          "donor_right_type": {
+            "type": ["string", "null"],
+            "enum": ["AUDIT_RIGHT", "SUSPENSION_RIGHT", "TERMINATION_RIGHT", "INTERVENTION_RIGHT", null],
+            "description": "Sub-type of DONOR_RIGHT clauses, or embedded donor right in mixed clauses (see contains_donor_right). AUDIT_RIGHT: inspection/investigation. SUSPENSION_RIGHT: halt disbursements. TERMINATION_RIGHT: revoke/terminate grant. INTERVENTION_RIGHT: intervene in operations. Null for pure NGO obligation clauses with no embedded donor right.",
+            "example": null
+          },
+          "contains_donor_right": {
+            "type": "boolean",
+            "description": "True when the clause is primarily an NGO obligation but also contains embedded donor power language. When true, donor_right_type identifies which type of donor right is embedded. Always false for pure DONOR_RIGHT clauses (the tier itself conveys this) and pure NGO obligation clauses.",
+            "example": false
           },
           "preference_signal": {
             "type": ["string", "null"],
             "description": "For GUIDED_DISCRETION clauses: the substance of what the donor prefers or recommends. Null for all other tiers.",
             "example": null
           },
+          "preference_strength": {
+            "type": ["string", "null"],
+            "enum": ["strong", "soft", null],
+            "description": "For GUIDED_DISCRETION clauses: strong (should/ideally — audit-adjacent, donor expects this) or soft (recommended/encouraged/advisable — genuine preference, no enforcement risk). Null for all other tiers.",
+            "example": null
+          },
           "creates_ngo_dependency": {
             "type": "boolean",
-            "description": "True when actor is DONOR and the NGO cannot act until the donor completes this action",
+            "description": "True when the NGO cannot act or proceed until the donor completes an action. Applies to DONOR_RIGHT and mixed clauses where the donor action blocks NGO progress.",
             "example": false
           },
           "dead_end": {
             "type": "boolean",
-            "description": "True when the clause is a terminal restriction matching a dead_end signal phrase",
+            "description": "True when a RESTRICTION or QUALIFIED_RESTRICTION clause matches a dead_end signal phrase. Always false for GUIDED_DISCRETION, DECISION, and DONOR_RIGHT.",
             "example": false
           },
           "dead_end_type": {
             "type": ["string", "null"],
             "enum": ["UNCONDITIONAL", "CONDITIONAL", "AMBIGUOUS", null],
-            "description": "Type of dead end: UNCONDITIONAL (no upstream condition), CONDITIONAL (gated by a decision branch), AMBIGUOUS (unresolved scope). Null when dead_end is false.",
+            "description": "Type of dead end. UNCONDITIONAL: no conditional language in the clause — pooling candidate (requires human verification). CONDITIONAL: conditional language present (if/when/provided that) — permanent pooling exclusion. AMBIGUOUS: genuine unresolved legal carve-out in the clause text — excluded until resolved. Null when dead_end is false.",
             "example": null
           },
           "domain": {
             "type": "string",
-            "enum": ["PROCUREMENT", "REPORTING", "RECORD_KEEPING", "ELIGIBILITY_ACTOR", "ELIGIBILITY_COMMODITY", "ELIGIBILITY_ASSET", "INTEGRITY", "FINANCIAL", "SAFEGUARDING", "SCOPE"],
+            "enum": ["PROCUREMENT", "REPORTING", "RECORD_KEEPING", "ELIGIBILITY_ACTOR", "ELIGIBILITY_COMMODITY", "ELIGIBILITY_ASSET", "INTEGRITY", "FINANCIAL", "SAFEGUARDING"],
             "description": "Primary semantic domain of the clause, used for cross-donor pooling",
             "example": "REPORTING"
           },
@@ -127,7 +144,10 @@
         "context_flag": false,
         "actor": "NGO",
         "decision_type": null,
+        "donor_right_type": null,
+        "contains_donor_right": false,
         "preference_signal": null,
+        "preference_strength": null,
         "creates_ngo_dependency": false,
         "dead_end": false,
         "dead_end_type": null,

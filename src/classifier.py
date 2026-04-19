@@ -21,30 +21,44 @@ def _build_system_prompt(taxonomy: dict) -> str:
     dead_end_signals = taxonomy["dead_ends"]["signals"]["phrases"]
     domains = taxonomy["domains"]["values"]
 
-    tier_lines = []
-    for tier_name, tier_data in tiers.items():
-        words = ", ".join(tier_data["trigger_words"])
-        tier_lines.append(f"- {tier_name}: {words}  ({tier_data['description']})")
-
     domain_lines = [f"- {k}: {v['description']}" for k, v in domains.items()]
 
     return f"""You are a compliance analyst extracting and classifying obligation clauses from donor agreement documents.
 
-TAXONOMY
---------
-Classify each clause into one of five tiers based on its modal language:
+TAXONOMY — NGO OBLIGATION LADDER
+---------------------------------
+Classify each NGO-facing clause into one of four tiers:
 
-{chr(10).join(tier_lines)}
-- QUALIFIED_RESTRICTION: A RESTRICTION trigger word is present but the clause is softened by a qualifying phrase (see QUALIFIERS below). Record the matched qualifier in the notes field.
+- RESTRICTION: Mandatory obligation. Trigger words: must, will, shall, required, binding, obliged, mandatory.
+- QUALIFIED_RESTRICTION: A RESTRICTION trigger word is present but softened by a qualifying phrase (see QUALIFIERS). The obligation still exists. Record the matched qualifier in notes.
+- GUIDED_DISCRETION: Non-mandatory language where the donor has stated a preference. NGO has genuine discretion — no mandate, no prior approval required. Two strengths:
+    strong — trigger words: should, ideally. Soft obligation; audit-adjacent. Donor expects this behavior and may raise it in a review.
+    soft — trigger words: recommended, suggested, encouraged, strongly encouraged, it is recommended, it is advisable, is advised, it is good practice, it is helpful. Genuine preference; deviation carries no direct enforcement risk.
+  Set preference_strength accordingly. Set preference_signal to the substance of what the donor prefers.
+- DECISION: Permissive language, no preference stated. Trigger words: may, can. Set decision_type to one of:
+    DISCRETIONARY_AUTONOMY — NGO actor, no approval required. Real NGO choice, no strings.
+    CONDITIONAL_FLEXIBILITY — NGO actor nominally, but prior donor approval is required before NGO may proceed. Look for "subject to [donor]'s prior agreement", "if an exception is approved", "with the agreement of".
+    null — when tier is not DECISION.
 
-BOUNDARY RULES
---------------
-HIGH_RISK vs GUIDED_DISCRETION: Ask — does deviation from this clause create audit or enforcement risk? If yes → HIGH_RISK. If no, the donor is stating a preference with no enforcement attached → GUIDED_DISCRETION.
-QUALIFIED_RESTRICTION vs GUIDED_DISCRETION: If a must/shall/required exists anywhere in the clause — even softened by "whenever possible" or "where advisable" — classify as QUALIFIED_RESTRICTION, not GUIDED_DISCRETION. A mandate anywhere in the clause means the obligation exists.
+DONOR POWER — SEPARATE AXIS
+-----------------------------
+DONOR_RIGHT is NOT part of the NGO obligation ladder. Use it when the entire clause describes a power the donor holds over the NGO or the agreement. The NGO is the object, not an actor.
+
+Set tier to DONOR_RIGHT and set donor_right_type to one of:
+- AUDIT_RIGHT — donor or third party entitled to inspect, examine, or investigate records, accounts, or operations. Look for: "entitled to inspect", "may conduct investigations", "auditors appointed by", "right to examine".
+- SUSPENSION_RIGHT — donor may halt or pause disbursements or the agreement. Look for: "may suspend", "reserves the right to suspend", "may withhold".
+- TERMINATION_RIGHT — donor may revoke, terminate, or cancel the grant. Look for: "may revoke", "may terminate", "reserves the right to revoke".
+- INTERVENTION_RIGHT — donor may intervene in operations, staffing, or procurement. Look for: "may require replacement of", "may direct", "may require the Contracting Authority to".
+
+MIXED CLAUSES (NGO obligation + embedded donor power)
+------------------------------------------------------
+When a single clause contains both an NGO obligation AND donor power language, classify by the primary NGO-facing obligation tier. Then set:
+- contains_donor_right: true
+- donor_right_type: the appropriate DONOR_RIGHT sub-type embedded in the clause
 
 QUALIFIERS
 ----------
-If a clause has a RESTRICTION trigger word AND contains one of these phrases, classify it as QUALIFIED_RESTRICTION instead of RESTRICTION:
+If a clause has a RESTRICTION trigger word AND contains one of these phrases, classify as QUALIFIED_RESTRICTION:
 {', '.join(qualifiers)}
 
 CONTEXT PATTERNS
@@ -57,41 +71,28 @@ ACTOR CLASSIFICATION
 Set actor to "DONOR" when the clause describes an action by the granting authority, the Commission, or the donor itself.
 Set actor to "NGO" for all other clauses (default).
 
-DECISION SUB-TYPING
--------------------
-When tier is DECISION, set decision_type to one of:
-- DISCRETIONARY_AUTONOMY: actor is NGO, no approval required, no preference signal. Real NGO choice with no strings.
-- CONDITIONAL_FLEXIBILITY: actor is NGO nominally, but the clause requires prior donor approval before the NGO may proceed. Look for "subject to [donor]'s prior agreement", "if an exception is approved", "with the agreement of", "provided [donor] agrees".
-- DONOR_RESERVED: actor is DONOR. The donor retains a right to act or intervene. Look for "reserves the right to", "is entitled to", "may declare", "may suspend", "may revoke", "may require".
-When tier is not DECISION, set decision_type to null.
-
 NGO DEPENDENCY
 --------------
-Set creates_ngo_dependency to true when actor is "DONOR" and the NGO's ability to act or proceed is contingent on the donor completing that action first.
-Set creates_ngo_dependency to false when the clause is purely internal donor process with no downstream impact on the NGO.
-When actor is "NGO", always set creates_ngo_dependency to false.
+Set creates_ngo_dependency to true when the NGO's ability to act or proceed is contingent on the donor completing an action first.
+Set creates_ngo_dependency to false otherwise.
 
-GUIDED DISCRETION PREFERENCE SIGNAL
-------------------------------------
-When tier is GUIDED_DISCRETION, set preference_signal to a short phrase capturing what the donor prefers or recommends (e.g. "use standard bidding documents", "recruit a dedicated Tender Officer", "request a bid security for works contracts").
-When tier is not GUIDED_DISCRETION, set preference_signal to null.
+DEAD ENDS — RESTRICTION AND QUALIFIED_RESTRICTION ONLY
+-------------------------------------------------------
+Dead ends apply only to RESTRICTION and QUALIFIED_RESTRICTION clauses. Always set dead_end to false for GUIDED_DISCRETION, DECISION, and DONOR_RIGHT.
 
-DEAD ENDS
----------
-A dead end is a terminal restriction that stops a decision path rather than redirecting it.
-If the clause contains any of these signals, set dead_end to true:
+If a RESTRICTION or QUALIFIED_RESTRICTION clause contains any of these signals, set dead_end to true:
 {', '.join(dead_end_signals)}
 
-When dead_end is true, also set dead_end_type:
-- UNCONDITIONAL: applies regardless of any upstream decision (no "if", "when", or conditional framing)
-- CONDITIONAL: reachable only via a specific decision branch (contains "if", "when", "in case of", etc.)
-- AMBIGUOUS: looks absolute but contains unresolved scope or undefined carve-outs; record the ambiguous phrase in notes
+When dead_end is true, set dead_end_type:
+- UNCONDITIONAL: no conditional language visible in the clause (no if/when/provided that). Pooling candidate — applies regardless of any upstream decision.
+- CONDITIONAL: conditional language visible in the clause (if, when, provided that, in cases where). Fires only on a specific branch. Permanent pooling exclusion.
+- AMBIGUOUS: genuine unresolved legal carve-out in the clause text (e.g. "prohibited except in exceptional circumstances" where exceptional is undefined). Record the ambiguous phrase in notes. Excluded from pooling.
 
 When dead_end is false, set dead_end_type to null.
 
 DOMAINS
 -------
-Assign one primary domain that best describes what the clause is about:
+Assign one primary domain:
 {chr(10).join(domain_lines)}
 
 INSTRUCTIONS
@@ -106,15 +107,18 @@ JSON shape for each clause (do not include clause_id — it will be added later)
   "text": "<full sentence>",
   "page": <int>,
   "trigger_word": "<word>",
-  "tier": "<RESTRICTION|QUALIFIED_RESTRICTION|DECISION|HIGH_RISK|GUIDED_DISCRETION>",
+  "tier": "<RESTRICTION|QUALIFIED_RESTRICTION|GUIDED_DISCRETION|DECISION|DONOR_RIGHT>",
   "context_flag": <true|false>,
   "actor": "<NGO|DONOR>",
-  "decision_type": "<DISCRETIONARY_AUTONOMY|CONDITIONAL_FLEXIBILITY|DONOR_RESERVED|null>",
+  "decision_type": "<DISCRETIONARY_AUTONOMY|CONDITIONAL_FLEXIBILITY|null>",
+  "donor_right_type": "<AUDIT_RIGHT|SUSPENSION_RIGHT|TERMINATION_RIGHT|INTERVENTION_RIGHT|null>",
+  "contains_donor_right": <true|false>,
   "preference_signal": "<string|null>",
+  "preference_strength": "<strong|soft|null>",
   "creates_ngo_dependency": <true|false>,
   "dead_end": <true|false>,
   "dead_end_type": "<UNCONDITIONAL|CONDITIONAL|AMBIGUOUS|null>",
-  "domain": "<PROCUREMENT|REPORTING|RECORD_KEEPING|ELIGIBILITY_ACTOR|ELIGIBILITY_COMMODITY|ELIGIBILITY_ASSET|INTEGRITY|FINANCIAL|SAFEGUARDING|SCOPE>",
+  "domain": "<PROCUREMENT|REPORTING|RECORD_KEEPING|ELIGIBILITY_ACTOR|ELIGIBILITY_COMMODITY|ELIGIBILITY_ASSET|INTEGRITY|FINANCIAL|SAFEGUARDING>",
   "notes": "<string>"
 }}"""
 

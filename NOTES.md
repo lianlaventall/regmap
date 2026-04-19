@@ -1,5 +1,96 @@
 # Session Notes — regmap
 
+## Session 2026-04-19 — Taxonomy redesign
+
+### Summary of changes resolved
+
+Full review of taxonomy fragile points. All four resolved. Implementation pending (taxonomy.yaml, output_schema.json, classifier.py, pipeline rerun).
+
+---
+
+### 1. Tier ladder changes
+
+**HIGH_RISK merged into GUIDED_DISCRETION**
+
+HIGH_RISK was removed as a standalone tier. The boundary between HIGH_RISK (`should`) and GUIDED_DISCRETION (`recommended`, `encouraged`) was the most fragile point in the taxonomy — both are non-mandatory preference signals, and the distinction (enforcement intent) required a classifier judgment call that was inherently unreliable.
+
+Merged into a single GUIDED_DISCRETION tier with a `preference_strength` field:
+- `strong` — `should`, `ideally` — soft obligation, audit-adjacent
+- `soft` — `recommended`, `encouraged`, `advisable`, `it is good practice` — genuine preference, no enforcement risk
+
+The obligation ladder is now 4 tiers:
+```
+RESTRICTION              → must, no choice
+QUALIFIED_RESTRICTION    → must, softened by context
+GUIDED_DISCRETION        → preference stated (strong or soft)
+DECISION                 → may, genuinely free choice
+```
+
+**DONOR_RESERVED removed from DECISION. DONOR_RIGHT added as standalone classification.**
+
+DONOR_RESERVED was a DECISION sub-type because the language is permissive (`may`, `reserves the right to`). But the NGO is the object of these clauses, not an actor exercising choice. It belongs on a separate axis — donor power, not NGO obligation.
+
+DONOR_RIGHT is now a standalone classification outside the obligation tier ladder. Sub-types:
+- `AUDIT_RIGHT` — inspection, examination of records, investigation rights
+- `SUSPENSION_RIGHT` — donor may halt disbursements
+- `TERMINATION_RIGHT` — donor may revoke or terminate the grant
+- `INTERVENTION_RIGHT` — donor may intervene in operations, staffing, procurement
+
+DECISION now has two sub-types only:
+- `DISCRETIONARY_AUTONOMY` — real NGO choice, no strings
+- `CONDITIONAL_FLEXIBILITY` — NGO nominally decides but needs prior donor approval
+
+**Scorecard impact:** `autonomy_rate` was already correct (counted DISCRETIONARY_AUTONOMY only). `approval_gating` was distorted by DONOR_RESERVED — now clean. New metric needed: `donor_power_rate` = DONOR_RIGHT clauses / total clauses.
+
+---
+
+### 2. Dead-end framework restricted to RESTRICTION and QUALIFIED_RESTRICTION
+
+Dead ends (UNCONDITIONAL / CONDITIONAL / AMBIGUOUS) were designed to identify terminal states in the NGO compliance flow. Applying them to GUIDED_DISCRETION and DECISION was meaningless — a terminal preference or a terminal free choice has no analytical value.
+
+Dead-end classification now applies only to RESTRICTION and QUALIFIED_RESTRICTION.
+
+**CONDITIONAL is a definitive pooling exclusion.** If conditional language is visible in the clause itself (`if`, `when`, `provided that`), the clause cannot be a universal baseline — no document-level analysis changes that.
+
+**UNCONDITIONAL is a pooling candidate, not a conclusion.** No conditional language visible in the clause is necessary but not sufficient. Human verification required before entering cross-donor baseline — clause may sit under a conditional section heading or have a carve-out elsewhere in the document.
+
+**AMBIGUOUS redefined.** Previously a catchall. Now means only: a genuine unresolved legal carve-out exists in the clause text itself (e.g., "prohibited except in exceptional circumstances" — exceptional undefined). Classifier uncertainty is not a valid source of AMBIGUOUS.
+
+Pooling workflow: UNCONDITIONAL → human review → confirmed baseline. CONDITIONAL and AMBIGUOUS never enter the pooling pipeline.
+
+---
+
+### 3. SCOPE domain retired
+
+SCOPE had 0–1 clauses across 771 total. Investigation confirmed two problems:
+1. Clauses classified as SCOPE were applicability statements ("These guidelines apply to all Beneficiaries") — not geographic/temporal boundaries
+2. True scope language (project geography, grant period, activity limits) lives in document structure (preambles, section headers), not in individual obligation clauses — the classifier never encounters it
+
+SCOPE retired from the domain list. 9 domains remain.
+
+---
+
+### 4. Multi-part clauses — contains_donor_right flag
+
+4 clauses in the corpus (all AFD) mix NGO obligation and embedded donor power in a single sentence. Splitting into two records adds pipeline complexity for 0.5% of clauses.
+
+Fix: flag approach. Mixed clauses keep their primary NGO-facing classification and add:
+- `contains_donor_right: true`
+- `donor_right_type`: which DONOR_RIGHT sub-type is embedded
+
+Three clause cases:
+| Case | `tier` | `contains_donor_right` | `donor_right_type` |
+|---|---|---|---|
+| Pure NGO obligation | RESTRICTION etc. | false | null |
+| Mixed | RESTRICTION etc. | true | AUDIT_RIGHT etc. |
+| Pure donor power | DONOR_RIGHT | — | AUDIT_RIGHT etc. |
+
+---
+
+## Open taxonomy issues (flagged 2026-04-14 — resolved 2026-04-19)
+
+---
+
 ## Session 2026-04-14 — DECISION sub-typing, GUIDED_DISCRETION, schema + taxonomy changes
 
 ### Analytical work

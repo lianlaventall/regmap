@@ -1,5 +1,5 @@
 tiers:
-  RESTRICTIONS:
+  RESTRICTION:
     description: Mandatory obligations — language that compels action
     trigger_words:
       - must
@@ -11,44 +11,22 @@ tiers:
       - obliged
       - mandatory
 
-  DECISIONS:
+  QUALIFIED_RESTRICTION:
     description: >
-      Permissive language — actions that are allowed but not required, and where
-      no donor preference is stated. Classify into one of four sub-types using the
-      decision_type field:
-        DISCRETIONARY_AUTONOMY — NGO actor, no approval required, no preference signal.
-          Real NGO choice with no strings attached.
-        CONDITIONAL_FLEXIBILITY — NGO actor nominally, but the clause requires prior
-          donor approval before the NGO may proceed. The real decision lives with the
-          donor. Look for phrases like "subject to AFD's prior agreement", "if an
-          exception is approved", "with the agreement of".
-        DONOR_RESERVED — DONOR actor. The donor retains a right to act or intervene.
-          Not an NGO choice. Look for "reserves the right to", "is entitled to",
-          "may declare", "may suspend", "may revoke".
-        null — use null when tier is not DECISION.
-    trigger_words:
-      - may
-      - can
-
-  HIGH_RISK:
-    description: >
-      Recommendatory language that carries compliance risk — soft obligations where
-      non-compliance creates audit exposure even without an explicit mandate.
-      Use HIGH_RISK when the clause implies consequences for non-compliance or
-      signals an expectation the donor will verify.
-      Do NOT use HIGH_RISK for clauses where the NGO has genuine discretion and
-      the donor is simply stating a preference — use GUIDED_DISCRETION instead.
-      The test: does deviation from this clause create audit or enforcement risk?
-      If yes → HIGH_RISK. If no, it is just a preference → GUIDED_DISCRETION.
-    trigger_words:
-      - should
-      - ideally
+      A RESTRICTION trigger word is present but the clause is softened by a qualifying
+      phrase. The obligation still exists — the qualifier provides a contextual off-ramp,
+      not an exemption. Record the matched qualifier in the notes field.
 
   GUIDED_DISCRETION:
     description: >
-      The NGO has genuine discretion — no mandate, no approval required — but the
-      donor has stated what they prefer. The NGO is free to deviate; the preference
-      is on record. Carries no direct compliance risk in isolation.
+      Non-mandatory language where the donor has stated a preference or expectation.
+      The NGO has genuine discretion — no mandate, no prior approval required.
+      Classified by preference_strength:
+        strong — trigger words: should, ideally. Soft obligation; non-compliance is
+          audit-adjacent. The donor expects this behavior and may raise it in a review.
+        soft — trigger words: recommended, suggested, encouraged, strongly encouraged,
+          it is recommended, it is advisable, is advised, it is good practice, it is helpful.
+          Genuine preference on record. Deviation carries no direct enforcement risk.
       Use GUIDED_DISCRETION when ALL of the following are true:
         1. The clause is permissive (no must/shall/required anywhere in the clause).
         2. The NGO does not need prior donor approval to proceed.
@@ -57,6 +35,8 @@ tiers:
       classify as QUALIFIED_RESTRICTION instead.
       Populate the preference_signal field with the substance of what the donor prefers.
     trigger_words:
+      - should
+      - ideally
       - recommended
       - suggested
       - encouraged
@@ -66,6 +46,46 @@ tiers:
       - is advised
       - it is good practice
       - it is helpful
+
+  DECISION:
+    description: >
+      Permissive language — actions that are allowed but not required, and where
+      no donor preference is stated. Classify into one of two sub-types using the
+      decision_type field:
+        DISCRETIONARY_AUTONOMY — NGO actor, no approval required, no preference signal.
+          Real NGO choice with no strings attached.
+        CONDITIONAL_FLEXIBILITY — NGO actor nominally, but the clause requires prior
+          donor approval before the NGO may proceed. The real decision lives with the
+          donor. Look for phrases like "subject to AFD's prior agreement", "if an
+          exception is approved", "with the agreement of".
+        null — use null when tier is not DECISION.
+    trigger_words:
+      - may
+      - can
+
+  DONOR_RIGHT:
+    description: >
+      A power the donor holds over the NGO or the agreement. Not an NGO obligation.
+      The NGO is the object of these clauses, not an actor exercising choice.
+      Separate axis from the obligation tier ladder — do not place on the
+      RESTRICTION → DECISION spectrum.
+      Classify into one of four sub-types using the donor_right_type field:
+        AUDIT_RIGHT — donor or third party is entitled to inspect, examine, or
+          investigate records, accounts, or operations.
+          Look for: "entitled to inspect", "may conduct investigations", "auditors
+          appointed by", "right to examine".
+        SUSPENSION_RIGHT — donor may halt or pause disbursements or the agreement.
+          Look for: "may suspend", "reserves the right to suspend", "may withhold".
+        TERMINATION_RIGHT — donor may revoke, terminate, or cancel the grant.
+          Look for: "may revoke", "may terminate", "reserves the right to revoke",
+          "may declare null and void".
+        INTERVENTION_RIGHT — donor may intervene in how the project is run —
+          staffing, procurement decisions, operational changes.
+          Look for: "may require replacement of", "may direct", "may require the
+          Contracting Authority to".
+      When a clause mixes an NGO obligation with embedded donor power, classify
+      by the primary (NGO-facing) obligation tier and set contains_donor_right: true
+      with the appropriate donor_right_type.
 
 qualifiers:
   description: >
@@ -100,27 +120,33 @@ context_patterns:
 
 dead_ends:
   description: >
-    Terminal states in the compliance flow. A dead end stops a decision path
-    rather than redirecting it. Used to distinguish restrictions that are truly
-    unconditional (candidates for cross-donor pooling) from those reachable only
-    via a specific upstream decision.
+    Terminal states in the compliance flow for RESTRICTION and QUALIFIED_RESTRICTION
+    clauses only. A dead end stops a decision path rather than redirecting it.
+    Used to identify restrictions that are truly unconditional — candidates for
+    cross-donor pooling — versus those only reachable via a specific upstream decision.
+    Do NOT apply dead-end classification to GUIDED_DISCRETION, DECISION, or DONOR_RIGHT.
   types:
     UNCONDITIONAL:
       description: >
-        Applies regardless of any upstream decision. Candidate for extraction
-        as a baseline requirement and cross-donor pooling.
+        No conditional language visible in the clause itself. Applies regardless of
+        any upstream decision. Pooling candidate — requires human verification before
+        entering cross-donor baseline (clause may sit under a conditional section
+        heading or have a carve-out elsewhere in the document).
     CONDITIONAL:
       description: >
-        Reachable only via a specific decision branch. Belongs in the tree as
-        a terminal node attached to its upstream decision point.
+        Conditional language is visible within the clause itself (if, when, provided
+        that, in cases where). Fires only on a specific decision branch. Permanent
+        exclusion from cross-donor pooling — no document-level analysis changes this.
     AMBIGUOUS:
       description: >
-        Looks absolute but contains unresolved scope or undefined carve-outs.
-        Flag for audit risk. Record the ambiguous phrase in notes.
+        A genuine unresolved legal carve-out exists in the clause text — the clause
+        looks absolute but contains undefined exceptions (e.g. "prohibited except in
+        exceptional circumstances" where exceptional is undefined). Record the
+        ambiguous phrase in notes. Excluded from pooling until resolved.
   signals:
     description: >
-      Phrases that indicate a clause is a terminal restriction. When matched,
-      set dead_end: true in the output JSON.
+      Phrases that indicate a clause is a terminal restriction. When matched in a
+      RESTRICTION or QUALIFIED_RESTRICTION clause, set dead_end: true in the output JSON.
     phrases:
       - only from
       - must not
@@ -170,5 +196,3 @@ domains:
       description: Budget, spend, reimbursement, or audit rules
     SAFEGUARDING:
       description: Protection of beneficiaries, staff, or data
-    SCOPE:
-      description: Geographic, temporal, or activity boundaries
