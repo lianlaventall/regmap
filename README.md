@@ -61,7 +61,7 @@ This is under development and will be a standalone visualization separate from `
 ## Setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/lianlaventall/regmap.git
 cd regmap
 
 python -m venv .venv
@@ -124,7 +124,7 @@ pytest tests/
 ```bash
 docker build -t regmap .
 docker run --rm \
-  -e ANTHROPIC_API_KEY=sk-ant-... \
+  --env-file .env \
   -v $(pwd)/input:/app/input \
   -v $(pwd)/output:/app/output \
   regmap
